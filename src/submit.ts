@@ -7,6 +7,9 @@ import { v4 } from 'uuid';
 import { db } from './server';
 import config from '../config.json';
 import { Token } from './types';
+import fetch from 'node-fetch';
+
+const DbQueue = [];
 
 export async function submit(files: fileUpload.FileArray | null | undefined, challenge: string, language_id: number): Promise<string> {
   if (!files || !files.src || (files.src as UploadedFile[]).length) {
@@ -27,31 +30,51 @@ export async function submit(files: fileUpload.FileArray | null | undefined, cha
     throw createError(400, 'No such challenge.');
   }
   
-  let challenge_config;
+  let challenge_config_exists = false;
   try {
     await access(`${challenge_dir}/config.json`, fs.constants.F_OK);
-    challenge_config = JSON.stringify(await readFile(`${challenge_dir}/config.json`, { encoding: 'utf8' }));
-  } catch (err) {
-    throw createError(500, 'Challenge error.');
+    challenge_config_exists = true;
+  } catch {}
+  
+  let challenge_config;
+  if (challenge_config_exists) {
+    try {
+      challenge_config = JSON.stringify(await readFile(`${challenge_dir}/config.json`, { encoding: 'utf8' }));
+    } catch (err) {
+      throw createError(500, 'Challenge error.');
+    }
   }
 
   let src;
   let submission: string;
   let submission_id: number;
-  try {
-    submission_id = ((await DbPromise(db, 'get', 'SELECT max(id) as max FROM Submissions', [])) as { max: number }).max as number + 1;
-    submission = v4();
+  const getIdPromise = await new Promise((resolve, reject) => {
+    DbQueue.push(async () => {
+      try {
+        submission_id = ((await DbPromise(db, 'get', 'SELECT max(id) as max FROM Submissions', [])) as { max: number }).max as number + 1;
+        submission = v4();
+        
+        await Promise.all([
+          (files.src as UploadedFile).mv(`./upload/${submission}`),
+          DbPromise(db, 'run', 'INSERT INTO Submissions VALUES (?, ?)', [submission_id, submission])
+        ]);
     
-    await Promise.all([
-      (files.src as UploadedFile).mv(`./upload/${submission}`),
-      DbPromise(db, 'run', 'INSERT INTO Submissions VALUES (?, ?)', [submission_id, submission])
-    ]);
+        src = await readFile(`./upload/${submission}`, { encoding: 'utf8' });
 
-    src = await readFile(`./upload/${submission}`, { encoding: 'utf8' });
-  } catch (err) {
-    throw createError(500, `Upload error: ${err.message}`);
-  }
-
+        DbQueue.splice(0, 1);
+        if (DbQueue.length > 0) {
+          DbQueue[0]();
+        }
+        resolve(submission_id);
+      } catch (err) {
+        throw createError(500, `Upload error: ${err.message}`);
+      }
+    });
+    if (DbQueue.length === 1) {
+      DbQueue[0]();
+    }
+  });
+  
   let responses;
   try {
     const files = await readdir(`${challenge_dir}/in`, { withFileTypes: true });
@@ -77,8 +100,8 @@ export async function submit(files: fileUpload.FileArray | null | undefined, cha
           language_id: language_id,
           stdin: input,
           expected_output: outputs[i],
-          cpu_time_limit: challenge_config.TIME_LIMIT || config.DEF_TIME_LIMIT,
-          memory_limit: challenge_config.MEMORY_LIMIT || config.DEF_MEMORY_LIMIT,
+          cpu_time_limit: challenge_config_exists ? challenge_config.TIME_LIMIT : config.DEF_TIME_LIMIT,
+          memory_limit: challenge_config_exists ? challenge_config.MEMORY_LIMIT : config.DEF_MEMORY_LIMIT,
           callback_url: `http://${config.BACKEND_URL === 'localhost' ? 'host.docker.internal' : config.BACKEND_URL}:${config.BACKEND_PORT}/callback`
         })
       })

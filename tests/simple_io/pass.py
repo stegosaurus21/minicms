@@ -1,8 +1,2 @@
-x = input()
-if x == "universe":
-  print("WA")
-elif x == "friend":
-  while (1):
-    pass
-else:
-  print(f"Hello {x}!")
+input()
+print(str(sum([int(x) for x in input().split(" ")])))

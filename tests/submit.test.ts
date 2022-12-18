@@ -10,7 +10,7 @@ const testSubmit = async (path: string, language_id: number, challenge: string) 
   data.append('src', fileStream, { knownLength: fileSize });
   if (language_id !== undefined) data.append('language_id', language_id);
   if (challenge !== undefined) data.append('challenge', challenge);
-  const res = await fetch(`${config.BACKEND_URL}:${config.BACKEND_PORT}/submit`, {
+  const res = await fetch(`http://${config.BACKEND_URL}:${config.BACKEND_PORT}/submit`, {
     method: 'POST',
     body: data
   });
@@ -21,8 +21,10 @@ const testSubmit = async (path: string, language_id: number, challenge: string) 
 
 describe('submit', () => {
   describe('success', () => {
-    test('simple_io/pass.py', () => {
-      testSubmit('./simple_io/pass.py', 71, 'tests/simple_io');
+    test('simple_io', async () => {
+      testSubmit('./tests/simple_io/pass.py', 71, 'tests/simple_io');
+      testSubmit('./tests/simple_io/overflow.cpp', 54, 'tests/simple_io');
+      testSubmit('./tests/simple_io/time_limit.py', 71, 'tests/simple_io');
     });
   });
 });
