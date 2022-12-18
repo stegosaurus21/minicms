@@ -1,0 +1,9 @@
+{
+  "BACKEND_URL": "localhost",
+  "BACKEND_PORT": "3000",
+  "JUDGE_URL": "localhost",
+  "JUDGE_PORT": "2358",
+
+  "DEF_TIME_LIMIT": 1.0,
+  "DEF_MEMORY_LIMIT": 131072
+}
