@@ -12,7 +12,7 @@ import fetch, { Response } from 'node-fetch';
 const DbQueue = [];
 
 export async function submit(files: fileUpload.FileArray | null | undefined, challenge: string, language_id: number): Promise<string> {
-  if (!files || !files.src || (files.src as UploadedFile[]).length) {
+  if (!files || !files.src) {
     throw createError(400, 'No file submitted.');
   }
   
@@ -102,7 +102,7 @@ export async function submit(files: fileUpload.FileArray | null | undefined, cha
           expected_output: outputs[i],
           cpu_time_limit: challenge_config_exists ? challenge_config.TIME_LIMIT : config.DEF_TIME_LIMIT,
           memory_limit: challenge_config_exists ? challenge_config.MEMORY_LIMIT : config.DEF_MEMORY_LIMIT,
-          callback_url: `http://${config.BACKEND_URL === 'localhost' ? 'host.docker.internal' : config.BACKEND_URL}:${config.BACKEND_PORT}/callback`
+          callback_url: `http://${config.BACKEND_URL === '0.0.0.0' ? 'host.docker.internal' : config.BACKEND_URL}:${config.BACKEND_PORT}/callback`
         })
       })
     ));

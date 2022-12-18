@@ -1,2 +1,2 @@
-input()
-print(str(sum([int(x) for x in input().split(" ")])))
+N = int(input())
+print(str(sum([int(input()) for _ in range(N)])))

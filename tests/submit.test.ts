@@ -5,9 +5,11 @@ import fetch from 'node-fetch'
 
 const testSubmit = async (path: string, language_id: number, challenge: string, expectSuccess: boolean = true) => {
   const data = new FormData();
-  const fileStream = fs.createReadStream(path);
-  const fileSize = fs.statSync(path).size;
-  data.append('src', fileStream, { knownLength: fileSize });
+  if (path !== undefined) {
+    const fileStream = fs.createReadStream(path);
+    const fileSize = fs.statSync(path).size;
+    data.append('src', fileStream, { knownLength: fileSize });
+  }
   if (language_id !== undefined) data.append('language_id', language_id);
   if (challenge !== undefined) data.append('challenge', challenge);
   const res = await fetch(`http://${config.BACKEND_URL}:${config.BACKEND_PORT}/submit`, {
@@ -36,6 +38,9 @@ describe('submit', () => {
   describe('errors', () => {
     test('empty source', async () => {
       await testSubmit('./tests/simple_io/empty.py', 72, 'tests/simple_io', false);
+    });
+    test('no source file', async () => {
+      await testSubmit(undefined, 72, 'tests/simple_io', false);
     });
     test('empty language_id', async () => {
       await testSubmit('./tests/simple_io/pass.py', undefined, 'tests/simple_io', false);

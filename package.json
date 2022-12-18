@@ -4,7 +4,8 @@
   "description": "Locally hosted HackerRank with flexibility",
   "scripts": {
     "test": "jest",
-    "start": "ts-node src/server.ts"
+    "start": "ts-node src/server.ts",
+    "start-debug": "node --inspect --require ts-node/register src/server.ts"
   },
   "author": "",
   "license": "ISC",
