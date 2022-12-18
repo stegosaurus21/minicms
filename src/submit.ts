@@ -7,7 +7,7 @@ import { v4 } from 'uuid';
 import { db } from './server';
 import config from '../config.json';
 import { Token } from './types';
-import fetch from 'node-fetch';
+import fetch, { Response } from 'node-fetch';
 
 const DbQueue = [];
 
@@ -74,8 +74,8 @@ export async function submit(files: fileUpload.FileArray | null | undefined, cha
       DbQueue[0]();
     }
   });
-  
-  let responses;
+
+  let responses: Response[];
   try {
     const files = await readdir(`${challenge_dir}/in`, { withFileTypes: true });
     if (files.length < 1) {
@@ -106,6 +106,15 @@ export async function submit(files: fileUpload.FileArray | null | undefined, cha
         })
       })
     ));
+    const failedSubmission = responses.find(response => !response.ok);
+    let errMessage = "";
+    if (failedSubmission) {
+      const failureReasons = await failedSubmission.json();
+      for (const reason in failureReasons) {
+        errMessage = `${errMessage}${reason}: ${(failureReasons[reason] as string[]).join(", ")}\n`;
+      }
+      throw new Error(errMessage);
+    }
     const tokens = (await Promise.all(responses.map(response => response.json()))).map(x => (x as Token).token);
     
     db.serialize(() => {

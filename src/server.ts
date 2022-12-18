@@ -57,6 +57,7 @@ app.delete('/clear', async (req, res) => {
   });
   await rm('../upload', { recursive: true, force: true });
   awaitJudge.clear();
+  res.json();
 });
 
 app.post('/submit', async (req, res, next) => {
@@ -120,9 +121,9 @@ app.put('/callback', async (req, res) => {
   console.log(body);
 
   await DbPromise(db, 'run', `
-  UPDATE Results 
-  SET (time, memory, status, compile_output) = (?, ?, ?, ?)
-  WHERE token = ?
+    UPDATE Results 
+    SET (time, memory, status, compile_output) = (?, ?, ?, ?)
+    WHERE token = ?
   `, [body.time, body.memory, body.status.description, body.compile_output || "Compilation successful.", body.token]);
 
   const waiter: Resolve | undefined = awaitJudge.get(body.token);
@@ -138,9 +139,7 @@ app.use((err, req, res, next) => {
   console.log(`${statusCode}: ${statusCode === 500 ? err : err.message}`);
   console.error(err);
   res.status(statusCode).json({
-    error: {
-      message: err.message,
-    },
+    error: err.message
   });
 });
 
