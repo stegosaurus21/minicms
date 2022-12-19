@@ -1,6 +1,6 @@
 import fileUpload, { UploadedFile } from 'express-fileupload';
 import { access, readdir, readFile } from 'fs/promises';
-import createError from 'http-errors';
+import createError, { HttpError } from 'http-errors';
 import fs from 'fs';
 import { DbPromise, throwError } from './helper';
 import { v4 } from 'uuid';
@@ -48,7 +48,7 @@ export async function submit(files: fileUpload.FileArray | null | undefined, cha
   let src;
   let submission: string;
   let submission_id: number;
-  const getIdPromise = await new Promise((resolve, reject) => {
+  await new Promise((resolve, reject) => {
     DbQueue.push(async () => {
       try {
         submission_id = ((await DbPromise(db, 'get', 'SELECT max(id) as max FROM Submissions', [])) as { max: number }).max as number + 1;
@@ -106,23 +106,26 @@ export async function submit(files: fileUpload.FileArray | null | undefined, cha
         })
       })
     ));
+
     const failedSubmission = responses.find(response => !response.ok);
-    let errMessage = "";
+    let errMessage = "Judging error: ";
     if (failedSubmission) {
       const failureReasons = await failedSubmission.json();
       for (const reason in failureReasons) {
-        errMessage = `${errMessage}${reason}: ${(failureReasons[reason] as string[]).join(", ")}\n`;
+        errMessage = `${errMessage}${reason}: ${(failureReasons[reason] as string[]).join(", ")}; `;
       }
-      throw new Error(errMessage);
+      throw createError(400, errMessage);
     }
+
     const tokens = (await Promise.all(responses.map(response => response.json()))).map(x => (x as Token).token);
     
-    db.serialize(() => {
+    await new Promise((resolve, reject) => db.serialize(() => {
       const insert = db.prepare('INSERT INTO Results VALUES (?, ?, ?, ?, ?, ?, ?)', throwError);
       tokens.map((token, i) => { insert.run([submission_id, i, token, 0, 0, 'In Queue', ''], throwError) });
-      insert.finalize();
-    });
+      insert.finalize((err) => err ? reject(err) : resolve(true));
+    }));
   } catch (err) {
+    if (err instanceof HttpError) throw err;
     throw createError(500, `Judging error: ${err.message}`);
   }
 
