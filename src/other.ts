@@ -1,47 +1,66 @@
 import { rm } from 'fs/promises';
+import { DbUserQueue, tokens } from './auth';
 import { awaitJudge } from './results';
 import { db } from './server';
+import { DbSubmissionQueue } from './submit';
 
-export function initDb() {
-  db.serialize(() => {
-    db.run(`
-      CREATE TABLE IF NOT EXISTS Submissions (
-        id numeric PRIMARY KEY,
-        token text
-      )
-    `);
-    db.run(`
-      CREATE TABLE IF NOT EXISTS Results (
-        submission numeric REFERENCES Submissions(id),
-        test_num numeric,
-        token text,
-        time numeric,
-        memory numeric,
-        status text,
-        compile_output text,
-        PRIMARY KEY (submission, test_num)
-      )
-    `);
+export async function initDb() {
+  await new Promise((resolve, reject) => { 
+    db.serialize(() => {
+      db.run(`
+        CREATE TABLE IF NOT EXISTS Users (
+          id numeric PRIMARY KEY,
+          username text UNIQUE,
+          password text
+        )
+      `);
+      db.run(`
+        CREATE TABLE IF NOT EXISTS Submissions (
+          id numeric PRIMARY KEY,
+          token text
+        )
+      `);
+      db.run(`
+        CREATE TABLE IF NOT EXISTS Results (
+          submission numeric REFERENCES Submissions(id),
+          test_num numeric,
+          token text,
+          time numeric,
+          memory numeric,
+          status text,
+          compile_output text,
+          PRIMARY KEY (submission, test_num)
+        )
+      `, (err) => (err) ? reject(err) : resolve(true));
+    });
   });
 }
 
-export async function clear() {
-  db.serialize(() => {
-    db.run(`
-      DELETE FROM Results
-    `);
-    db.run(`
-      DELETE FROM Submissions
-    `);
-  });
-  await rm('../upload', { recursive: true, force: true });
+export async function clear() { 
+  DbSubmissionQueue.splice(0);
+  DbUserQueue.splice(0);
+  tokens.clear();
   awaitJudge.clear();
+  await new Promise((resolve, reject) => { 
+    db.serialize(() => {
+      db.run(`
+        DELETE FROM Results
+      `);
+      db.run(`
+        DELETE FROM Submissions
+      `);
+      db.run(`
+        DELETE FROM Users
+      `, (err) => (err) ? reject(err) : resolve(true));
+    }); 
+  });
+  await rm('./upload', { recursive: true, force: true });
 }
 
 export const errorHandler = (err, req, res, next) => {
   const statusCode = err.status || err.statusCode || 500;
   console.log(`${statusCode}: ${statusCode === 500 ? err : err.message}`);
-  res.status(statusCode).json({
+  return res.status(statusCode).json({
     error: err.message
   });
 };

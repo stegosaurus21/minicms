@@ -4,12 +4,12 @@ import createError, { HttpError } from 'http-errors';
 import fs from 'fs';
 import { DbPromise, throwError } from './helper';
 import { v4 } from 'uuid';
-import { db } from './server';
+import { db, judgeSecret } from './server';
 import config from '../config.json';
 import { Token } from './types';
 import fetch, { Response } from 'node-fetch';
 
-const DbQueue = [];
+export const DbSubmissionQueue = [];
 
 export async function submit(files: fileUpload.FileArray | null | undefined, challenge: string, language_id: number): Promise<string> {
   if (!files || !files.src) {
@@ -49,7 +49,7 @@ export async function submit(files: fileUpload.FileArray | null | undefined, cha
   let submission: string;
   let submission_id: number;
   await new Promise((resolve, reject) => {
-    DbQueue.push(async () => {
+    DbSubmissionQueue.push(async () => {
       try {
         submission_id = ((await DbPromise(db, 'get', 'SELECT max(id) as max FROM Submissions', [])) as { max: number }).max as number + 1;
         submission = v4();
@@ -61,17 +61,17 @@ export async function submit(files: fileUpload.FileArray | null | undefined, cha
     
         src = await readFile(`./upload/${submission}`, { encoding: 'utf8' });
 
-        DbQueue.splice(0, 1);
-        if (DbQueue.length > 0) {
-          DbQueue[0]();
+        DbSubmissionQueue.splice(0, 1);
+        if (DbSubmissionQueue.length > 0) {
+          DbSubmissionQueue[0]();
         }
         resolve(submission_id);
       } catch (err) {
         throw createError(500, `Upload error: ${err.message}`);
       }
     });
-    if (DbQueue.length === 1) {
-      DbQueue[0]();
+    if (DbSubmissionQueue.length === 1) {
+      DbSubmissionQueue[0]();
     }
   });
 
@@ -102,7 +102,7 @@ export async function submit(files: fileUpload.FileArray | null | undefined, cha
           expected_output: outputs[i],
           cpu_time_limit: challenge_config_exists ? challenge_config.TIME_LIMIT : config.DEF_TIME_LIMIT,
           memory_limit: challenge_config_exists ? challenge_config.MEMORY_LIMIT : config.DEF_MEMORY_LIMIT,
-          callback_url: `http://${config.BACKEND_URL === '0.0.0.0' ? 'host.docker.internal' : config.BACKEND_URL}:${config.BACKEND_PORT}/callback`
+          callback_url: `http://${config.BACKEND_URL === '0.0.0.0' ? 'host.docker.internal' : config.BACKEND_URL}:${config.BACKEND_PORT}/callback/${judgeSecret}`
         })
       })
     ));

@@ -20,3 +20,8 @@ export interface Result {
 };
 
 export type Resolve = (value: unknown) => void;
+
+export interface Session {
+  uId: number,
+  timeout: number
+};
