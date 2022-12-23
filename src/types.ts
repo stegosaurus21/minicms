@@ -21,7 +21,23 @@ export interface Result {
 
 export type Resolve = (value: unknown) => void;
 
+export interface ResolveCounter {
+  counter: number,
+  resolve: Resolve
+};
+
+export interface SubmitReturn {
+  submissionToken: string,
+  resultPromise: Promise<boolean>
+}
+
 export interface Session {
   uId: number,
   timeout: number
+};
+
+export interface Subtask {
+  weight: number,
+  mode: 'BATCH' | 'INDIVIDUAL',
+  tasks: string[]
 };

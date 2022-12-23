@@ -1,6 +1,6 @@
 import { rm } from 'fs/promises';
 import { DbUserQueue, tokens } from './auth';
-import { awaitJudge } from './results';
+import { awaitResult, awaitScoring, awaitTest } from './results';
 import { db } from './server';
 import { DbSubmissionQueue } from './submit';
 
@@ -17,6 +17,10 @@ export async function initDb() {
       db.run(`
         CREATE TABLE IF NOT EXISTS Submissions (
           id numeric PRIMARY KEY,
+          owner numeric REFERENCES Users(id),
+          contest text,
+          challenge text,
+          score numeric,
           token text
         )
       `);
@@ -40,7 +44,9 @@ export async function clear() {
   DbSubmissionQueue.splice(0);
   DbUserQueue.splice(0);
   tokens.clear();
-  awaitJudge.clear();
+  awaitTest.clear();
+  awaitScoring.clear();
+  awaitResult.clear();
   await new Promise((resolve, reject) => { 
     db.serialize(() => {
       db.run(`

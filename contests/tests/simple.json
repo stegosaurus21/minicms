@@ -1,0 +1,13 @@
+{
+  "name": "Sample Contest",
+  "problems": [
+    {
+      "name": "tests/simple_io",
+      "score": 100
+    },
+    {
+      "name": "tests/simple_io_subtasks",
+      "score": 80
+    }
+  ]
+}

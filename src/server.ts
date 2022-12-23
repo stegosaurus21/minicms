@@ -1,19 +1,22 @@
-import express, { json, Request, Response } from 'express';
+import express, { json } from 'express';
 import config from '../config.json';
 import cors from 'cors';
 import fileUpload from 'express-fileupload';
 import sqlite3 from 'sqlite3';
 import { submit } from './submit';
-import { getSubmissionTestCount, getTest, judgeCallback } from './results';
+import { awaitResult, getResult, getSubmissionTestCount, getTest, judgeCallback, processResult } from './results';
 import { clear, errorHandler, initDb } from './other';
 import morgan from 'morgan';
-import { auth, login, register } from './auth';
+import { auth, getUser, login, register } from './auth';
 import { v4 } from 'uuid';
+import { Resolve } from './types';
 
 sqlite3.verbose();
 export const db = new sqlite3.Database('./db.sqlite3');
 
 const app = express();
+let lastClear = Date.now();
+
 app.use(json());
 app.use(cors());
 app.use(morgan('dev'));
@@ -41,33 +44,55 @@ app.post('/auth/login', async (req, res, next) => {
 });
 
 app.delete('/clear', async (req, res) => {
+  lastClear = Date.now();
   await clear();
   res.json();
 });
 
 export const judgeSecret = v4();
-app.put(`/callback/${judgeSecret}`, async (req, res) => {
-  await judgeCallback(req.body);
+app.put(`/callback/${judgeSecret}/:submissionId/:testNum/:timeSent`, async (req, res) => {
+  if (parseInt(req.params.timeSent) < lastClear) return res.json();
+  await judgeCallback(req.body, parseInt(req.params.submissionId), parseInt(req.params.testNum));
   res.json();
 });
 
 app.use(errorHandler);
-
 app.use(auth);
 
 app.post('/submit', async (req, res, next) => {
   try {
-    const str = await submit(req.files, req.body.challenge, parseInt(req.body.language_id))
-    res.json({ token: str });
+    const { contest, challenge, language_id } = req.body;
+    const user = await getUser(req);
+    const result = await submit(req.files, user, contest, challenge, parseInt(language_id));
+    res.json({ token: result.submissionToken });
+    await result.resultPromise;
+    await processResult(result.submissionToken);
   } catch (err) {
     next(err);
   }
 });
 
-app.get('/results/:submission', async (req, res, next) => {
+app.get('/results/leaderboard', async (req, res, next) => {
+  try {
+
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/results/:submission/tests', async (req, res, next) => {
   try {
     const submission = req.params.submission;
     res.json({ tests: await getSubmissionTestCount(submission) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/results/:submission/score', async (req, res, next) => {
+  try {
+    const submission = req.params.submission;
+    res.json({ score: await getResult(submission) });
   } catch (err) {
     next(err);
   }

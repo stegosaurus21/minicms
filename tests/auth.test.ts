@@ -30,13 +30,13 @@ describe('auth', () => {
     test('invalid user token for auth routes', async () => {
       await testRegister('user1', 'pass1');
       const userToken = await testLogin('user1', 'pass1');
-      const submissionToken = await testSubmit(userToken, './tests/simple_io/pass.py', 71, 'tests/simple_io');
+      const submissionToken = await testSubmit(userToken, './tests/simple_io/pass.py', 71, 'tests/simple', 'tests/simple_io');
 
-      await testSubmit(undefined, './tests/simple_io/pass.py', 71, 'tests/simple_io', ExpectState.FAILURE);
+      await testSubmit(undefined, './tests/simple_io/pass.py', 71, 'tests/simple', 'tests/simple_io', ExpectState.FAILURE);
       await testGetSubmissionTestCount(undefined, submissionToken, ExpectState.FAILURE);
       await testGetTestResult(undefined, submissionToken, 0, ExpectState.FAILURE);
 
-      await testSubmit('not-a-valid-token', './tests/simple_io/pass.py', 71, 'tests/simple_io', ExpectState.FAILURE);
+      await testSubmit('not-a-valid-token', './tests/simple_io/pass.py', 71, 'tests/simple', 'tests/simple_io', ExpectState.FAILURE);
       await testGetSubmissionTestCount('not-a-valid-token', submissionToken, ExpectState.FAILURE);
       await testGetTestResult('not-a-valid-token', submissionToken, 0, ExpectState.FAILURE);
     });

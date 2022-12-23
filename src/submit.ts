@@ -2,16 +2,17 @@ import fileUpload, { UploadedFile } from 'express-fileupload';
 import { access, readdir, readFile } from 'fs/promises';
 import createError, { HttpError } from 'http-errors';
 import fs from 'fs';
-import { DbPromise, throwError } from './helper';
+import { contestProblemsHaveScore, DbPromise, getChallengeConfig, getChallengeTests, getContestConfig, throwError } from './helper';
 import { v4 } from 'uuid';
 import { db, judgeSecret } from './server';
 import config from '../config.json';
-import { Token } from './types';
+import { SubmitReturn, Token } from './types';
 import fetch, { Response } from 'node-fetch';
+import { awaitScoring } from './results';
 
 export const DbSubmissionQueue = [];
 
-export async function submit(files: fileUpload.FileArray | null | undefined, challenge: string, language_id: number): Promise<string> {
+export async function submit(files: fileUpload.FileArray | null | undefined, owner: number, contest: string, challenge: string, language_id: number): Promise<SubmitReturn> {
   if (!files || !files.src) {
     throw createError(400, 'No file submitted.');
   }
@@ -30,20 +31,19 @@ export async function submit(files: fileUpload.FileArray | null | undefined, cha
     throw createError(400, 'No such challenge.');
   }
   
-  let challenge_config_exists = false;
-  try {
-    await access(`${challenge_dir}/config.json`, fs.constants.F_OK);
-    challenge_config_exists = true;
-  } catch {}
-  
-  let challenge_config;
-  if (challenge_config_exists) {
-    try {
-      challenge_config = JSON.stringify(await readFile(`${challenge_dir}/config.json`, { encoding: 'utf8' }));
-    } catch (err) {
-      throw createError(500, 'Challenge error.');
+  const contest_config = await getContestConfig(contest);
+  if (contestProblemsHaveScore(contest_config)) {
+    if (!contest_config.problems.map(x => x.name).includes(challenge)) {
+      throw createError(400, 'Challenge not in contest.');
+    }
+  } else {
+    if (!contest_config.problems.includes(challenge)) {
+      throw createError(400, 'Challenge not in contest.');
     }
   }
+
+  const challenge_config = await getChallengeConfig(challenge);
+  const challenge_config_exists = (challenge_config !== undefined);
 
   let src;
   let submission: string;
@@ -56,7 +56,7 @@ export async function submit(files: fileUpload.FileArray | null | undefined, cha
         
         await Promise.all([
           (files.src as UploadedFile).mv(`./upload/${submission}`),
-          DbPromise(db, 'run', 'INSERT INTO Submissions VALUES (?, ?)', [submission_id, submission])
+          DbPromise(db, 'run', 'INSERT INTO Submissions VALUES (?, ?, ?, ?, ?, ?)', [submission_id, owner, contest, challenge, null, submission])
         ]);
     
         src = await readFile(`./upload/${submission}`, { encoding: 'utf8' });
@@ -75,23 +75,22 @@ export async function submit(files: fileUpload.FileArray | null | undefined, cha
     }
   });
 
-  let responses: Response[];
+  let resultPromise;
   try {
-    const files = await readdir(`${challenge_dir}/in`, { withFileTypes: true });
-    if (files.length < 1) {
-      throw new Error();
-    }
+    const files = await getChallengeTests(challenge);
 
-    const IOs = await Promise.all(files.filter(file => file.isFile()).map(
+    resultPromise = new Promise((resolve, reject) => { awaitScoring.set(submission, { counter: files.length, resolve: resolve })});
+
+    const IOs = await Promise.all(files.map(
       file => readFile(`${challenge_dir}/in/${file.name}`, { encoding: 'utf8' })
-    ).concat(files.filter(file => file.isFile()).map(
+    ).concat(files.map(
       file => readFile(`${challenge_dir}/out/${file.name}`, { encoding: 'utf8' })
     )));
     
     const inputs = IOs.slice(0, files.length);
     const outputs = IOs.slice(files.length, IOs.length);
     
-    responses = await Promise.all(inputs.map(
+    const responses = await Promise.all(inputs.map(
       (input, i) => fetch(`http://${config.JUDGE_URL}:${config.JUDGE_PORT}/submissions`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -100,15 +99,15 @@ export async function submit(files: fileUpload.FileArray | null | undefined, cha
           language_id: language_id,
           stdin: input,
           expected_output: outputs[i],
-          cpu_time_limit: challenge_config_exists ? challenge_config.TIME_LIMIT : config.DEF_TIME_LIMIT,
-          memory_limit: challenge_config_exists ? challenge_config.MEMORY_LIMIT : config.DEF_MEMORY_LIMIT,
-          callback_url: `http://${config.BACKEND_URL === '0.0.0.0' ? 'host.docker.internal' : config.BACKEND_URL}:${config.BACKEND_PORT}/callback/${judgeSecret}`
+          cpu_time_limit: challenge_config_exists ? challenge_config.time_limit : config.time_limit,
+          memory_limit: challenge_config_exists ? challenge_config.memory_limit : config.memory_limit,
+          callback_url: `http://${config.BACKEND_URL === '0.0.0.0' ? 'host.docker.internal' : config.BACKEND_URL}:${config.BACKEND_PORT}/callback/${judgeSecret}/${submission_id}/${i}/${Date.now()}`
         })
       })
     ));
 
     const failedSubmission = responses.find(response => !response.ok);
-    let errMessage = "Judging error: ";
+    let errMessage = "Submission error: ";
     if (failedSubmission) {
       const failureReasons = await failedSubmission.json();
       for (const reason in failureReasons) {
@@ -116,18 +115,10 @@ export async function submit(files: fileUpload.FileArray | null | undefined, cha
       }
       throw createError(400, errMessage);
     }
-
-    const tokens = (await Promise.all(responses.map(response => response.json()))).map(x => (x as Token).token);
-    
-    await new Promise((resolve, reject) => db.serialize(() => {
-      const insert = db.prepare('INSERT INTO Results VALUES (?, ?, ?, ?, ?, ?, ?)', throwError);
-      tokens.map((token, i) => { insert.run([submission_id, i, token, 0, 0, 'In Queue', ''], throwError) });
-      insert.finalize((err) => err ? reject(err) : resolve(true));
-    }));
   } catch (err) {
     if (err instanceof HttpError) throw err;
     throw createError(500, `Judging error: ${err.message}`);
   }
 
-  return submission;
+  return { submissionToken: submission, resultPromise: resultPromise };
 }

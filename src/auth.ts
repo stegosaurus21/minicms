@@ -6,7 +6,7 @@ import { Session } from './types';
 import { v4 } from 'uuid';
 import { Request } from 'express';
 
-const PASS_SALT = "__HACKERN'T__"
+const PASS_SALT = "__HACKERN'T__";
 
 export const DbUserQueue = [];
 export const tokens: Map<String, Session> = new Map<String, Session>();
@@ -87,9 +87,18 @@ export async function login(username: string, password: string) {
   }
 }
 
-export const auth = (req: Request, res, next) => {
-  console.log('Ran auth middleware!');
+export async function getUser(req: Request) {
+  const token = req.header('token');
+  const session = tokens.get(token);
+  
+  if (token === undefined || session === undefined || session.timeout < Date.now()) {
+    throw createError(403, 'Invalid or expired token.');
+  }
 
+  return session.uId;
+}
+
+export const auth = (req: Request, res, next) => {
   const token = req.header('token');
   const session = tokens.get(token);
   
