@@ -39,6 +39,13 @@ export async function testLogin(username: string, password: string, expectSucces
   return body;
 }
 
+export async function testSubmitAndWait(userToken: string, path: string, language_id: number, contest: string, challenge: string):
+  Promise<{ token: string, score: number }> {
+  const token = await testSubmit(userToken, path, language_id, contest, challenge);
+  const score = await testGetSubmissionScore(userToken, token);
+  return { token: token, score: score };
+}
+
 export async function testSubmit(userToken: string, path: string, language_id: number, contest: string, challenge: string, expectSuccess: ExpectState = ExpectState.SUCCESS_NO_CHECK) {
   const data = new FormData();
   if (path !== undefined) {
@@ -64,22 +71,21 @@ export async function testSubmit(userToken: string, path: string, language_id: n
   return body;
 }
 
-export async function testGetSubmissionTestCount(userToken: string, token: string, expectSuccess: ExpectState = ExpectState.SUCCESS_NO_CHECK) {
-  const res = await fetch(`http://${config.BACKEND_URL}:${config.BACKEND_PORT}/results/${token}/tests`, {
+export async function testGetChallengeScoring(userToken: string, challenge: string, expectSuccess: ExpectState = ExpectState.SUCCESS_NO_CHECK) {
+  const res = await fetch(`http://${config.BACKEND_URL}:${config.BACKEND_PORT}/challenge/scoring?${new URLSearchParams({ challenge: challenge })}`, {
     method: 'GET',
     headers: { 'token': userToken }
   });
   const body = await res.json();
   expect(res.ok).toStrictEqual(expectSuccess !== ExpectState.FAILURE);
-  if (expectSuccess === ExpectState.SUCCESS_NO_CHECK) return body['tests'];
+  if (expectSuccess === ExpectState.SUCCESS_NO_CHECK) return body;
 
-  if (expectSuccess === ExpectState.SUCCESS) expect(body).toStrictEqual({ tests: expect.any(Number) });
-  else expect(body).toStrictEqual({ error: expect.any(String) });
+  if (expectSuccess === ExpectState.FAILURE) expect(body).toStrictEqual({ error: expect.any(String) });
   return body;
 }
 
-export async function testGetSubmissionScore(userToken: string, token: string, expectSuccess: ExpectState = ExpectState.SUCCESS_NO_CHECK) {
-  const res = await fetch(`http://${config.BACKEND_URL}:${config.BACKEND_PORT}/results/${token}/score`, {
+export async function testGetSubmissionScore(userToken: string, submission: string, expectSuccess: ExpectState = ExpectState.SUCCESS_NO_CHECK) {
+  const res = await fetch(`http://${config.BACKEND_URL}:${config.BACKEND_PORT}/results/score?${new URLSearchParams({ submission: submission })}`, {
     method: 'GET',
     headers: { 'token': userToken }
   });
@@ -92,8 +98,36 @@ export async function testGetSubmissionScore(userToken: string, token: string, e
   return body;
 }
 
-export async function testGetTestResult(userToken: string, token: string, test: number, expectSuccess: ExpectState = ExpectState.SUCCESS_NO_CHECK) {
-  const res = await fetch(`http://${config.BACKEND_URL}:${config.BACKEND_PORT}/results/${token}/${test}`, {
+export async function testGetLeaderboard(userToken: string, contest: string, expectSuccess: ExpectState = ExpectState.SUCCESS_NO_CHECK) {
+  const res = await fetch(`http://${config.BACKEND_URL}:${config.BACKEND_PORT}/results/leaderboard?${new URLSearchParams({ contest: contest })}`, {
+    method: 'GET',
+    headers: { 'token': userToken }
+  });
+  const body = await res.json();
+  expect(res.ok).toStrictEqual(expectSuccess !== ExpectState.FAILURE);
+  if (expectSuccess === ExpectState.SUCCESS_NO_CHECK) return body['leaderboard'];
+
+  if (expectSuccess === ExpectState.SUCCESS) expect(body).toStrictEqual({ leaderboard: expect.any(Object) });
+  else expect(body).toStrictEqual({ error: expect.any(String) });
+  return body;
+}
+
+export async function testGetChallengeResults(userToken: string, contest: string, challenge: string, expectSuccess: ExpectState = ExpectState.SUCCESS_NO_CHECK) {
+  const res = await fetch(`http://${config.BACKEND_URL}:${config.BACKEND_PORT}/results/challenge?${new URLSearchParams({ contest: contest, challenge: challenge })}`, {
+    method: 'GET',
+    headers: { 'token': userToken }
+  });
+  const body = await res.json();
+  expect(res.ok).toStrictEqual(expectSuccess !== ExpectState.FAILURE);
+  if (expectSuccess === ExpectState.SUCCESS_NO_CHECK) return body['submissions'];
+
+  if (expectSuccess === ExpectState.SUCCESS) expect(body).toStrictEqual({ submissions: expect.any(Object) });
+  else expect(body).toStrictEqual({ error: expect.any(String) });
+  return body;
+}
+
+export async function testGetTestResult(userToken: string, submission: string, test: number, expectSuccess: ExpectState = ExpectState.SUCCESS_NO_CHECK) {
+  const res = await fetch(`http://${config.BACKEND_URL}:${config.BACKEND_PORT}/results/tests/${test}?${new URLSearchParams({ submission: submission })}`, {
     method: 'GET',
     headers: { 'token': userToken }
   });

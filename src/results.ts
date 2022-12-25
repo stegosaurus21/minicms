@@ -1,4 +1,4 @@
-import { contestProblemsHaveScore, DbPromise, getChallengeConfig, getChallengeTests, getContestConfig } from './helper';
+import { contestProblemsHaveScore, DbPromise, getChallengeConfig, getChallengeTests, getContestConfig, getContestProblems } from './helper';
 import createError, { HttpError } from 'http-errors';
 import { db } from './server';
 import { Resolve, ResolveCounter, Result, Subtask } from './types';
@@ -7,7 +7,7 @@ export const awaitTest: Map<String, Resolve> = new Map<String, Resolve>();
 export const awaitResult: Map<String, Resolve> = new Map<String, Resolve>();
 export const awaitScoring: Map<String, ResolveCounter> = new Map<String, ResolveCounter>();
 
-export async function getSubmissionTestCount(submission: string) {
+async function getSubmissionChallenge(submission: string): Promise<string> {
   try {
     const exists = await DbPromise(db, 'get', `
       SELECT count(s.token) AS count
@@ -22,15 +22,19 @@ export async function getSubmissionTestCount(submission: string) {
       WHERE s.token = ?
     `, [submission]);
 
-    return (await getChallengeTests(row['challenge'])).length;
+    return row['challenge'];
   } catch (err) {
     if (err instanceof HttpError) throw err;
     throw createError(500, 'Results error');
   }
 }
 
+async function getSubmissionTestCount(submission: string): Promise<number> {
+  return (await getChallengeTests(await getSubmissionChallenge(submission))).length;
+}
+
 export async function getTest(submission: string, test_num: number) {
-  const numTests = (await getSubmissionTestCount(submission)) as number;
+  const numTests = (await getSubmissionTestCount(submission));
 
   if (test_num < 0 || test_num >= numTests) {
     throw createError(404, 'Test not found.');
@@ -132,7 +136,7 @@ export async function processResult(submission: string) {
   
   let total_score;
   let submission_score = 0;
-  if (challenge_config === undefined || challenge_config.scoring === undefined) {
+  if (challenge_config.scoring === undefined) {
     total_score = files.length;
     let results = await Promise.all(files.map((_, i) => getTest(submission, i)));
     submission_score = results.filter(result => result.status === 'Accepted').length;
@@ -175,13 +179,38 @@ export async function processResult(submission: string) {
   }
 }
 
-export async function getLeaderboard(contest: string) {
-
-  const participants = (await DbPromise(db, 'all', `
-    SELECT DISTINCT s.owner
+export async function getLeaderboard(contest: string): Promise<[string, number[]][]> {
+  const best_scores = (await DbPromise(db, 'all', `
+    SELECT u.username, s.challenge, max(s.score) AS score
     FROM Submissions s
+    JOIN Users u on s.owner = u.id
     WHERE s.contest = ?
-  `, [contest]) as { owner: number }[]).map(x => x.owner);
+    GROUP BY s.owner, s.challenge
+  `, [contest]) as { username: string, challenge: string, score: number }[]);
 
-  
+  const problems = await getContestProblems(contest);
+  const problem_index_map = problems.reduce((prev, next, i) => prev.set(next, i), new Map<string, Number>());
+
+  const total_scores = best_scores.reduce((prev, next) => {
+    if (!prev[next.username]) prev[next.username] = problems.map(x => 0);
+    prev[next.username][problem_index_map.get(next.challenge)] = next.score;
+    return prev;
+  }, {});
+
+  const result: [string, number[]][] = [];
+  for (const user in total_scores) {
+    result.push([user, total_scores[user]]);
+  }
+  result.sort((a, b) => (b[1].reduce((p, n) => p + n, 0) - (a[1].reduce((p, n) => p + n, 0)) || a[0].localeCompare(b[0])));
+
+  return result;
+}
+
+export async function getChallengeResults(uId: number, contest: string, challenge: string) {
+  return (await DbPromise(db, 'all', `
+    SELECT s.time, s.token, s.score
+    FROM Submissions s
+    WHERE (s.owner = ? AND s.contest = ? AND s.challenge = ?)
+    ORDER BY s.time DESC
+  `, [uId, contest, challenge])) as { time: number, token: string, score: number }[];
 }

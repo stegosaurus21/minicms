@@ -1,4 +1,4 @@
-import { clear, ExpectState, testGetSubmissionTestCount, testGetTestResult, testLogin, testRegister, testSubmit } from "./testHelper";
+import { clear, ExpectState, testGetChallengeScoring, testGetTestResult, testLogin, testRegister, testSubmit } from "./testHelper";
 
 beforeEach(async () => { await clear() });
 
@@ -33,11 +33,11 @@ describe('auth', () => {
       const submissionToken = await testSubmit(userToken, './tests/simple_io/pass.py', 71, 'tests/simple', 'tests/simple_io');
 
       await testSubmit(undefined, './tests/simple_io/pass.py', 71, 'tests/simple', 'tests/simple_io', ExpectState.FAILURE);
-      await testGetSubmissionTestCount(undefined, submissionToken, ExpectState.FAILURE);
+      await testGetChallengeScoring(undefined, 'tests/simple_io', ExpectState.FAILURE);
       await testGetTestResult(undefined, submissionToken, 0, ExpectState.FAILURE);
 
       await testSubmit('not-a-valid-token', './tests/simple_io/pass.py', 71, 'tests/simple', 'tests/simple_io', ExpectState.FAILURE);
-      await testGetSubmissionTestCount('not-a-valid-token', submissionToken, ExpectState.FAILURE);
+      await testGetChallengeScoring('not-a-valid-token', 'tests/simple_io', ExpectState.FAILURE);
       await testGetTestResult('not-a-valid-token', submissionToken, 0, ExpectState.FAILURE);
     });
   })

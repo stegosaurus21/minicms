@@ -50,6 +50,12 @@ export function contestProblemsHaveScore(contest_config: any) {
   return (typeof contest_config.problems[0] !== 'string');
 }
 
+export async function getContestProblems(contest: string): Promise<string[]> {
+  const contest_config = await getContestConfig(contest);
+  if (contestProblemsHaveScore(contest_config)) return contest_config.problems.map(p => p.name);
+  return contest_config.problems;
+}
+
 export async function getContestConfig(contest: string) {
   let contest_config_exists = false;
   try {

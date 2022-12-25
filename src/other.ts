@@ -21,7 +21,8 @@ export async function initDb() {
           contest text,
           challenge text,
           score numeric,
-          token text
+          token text,
+          time numeric
         )
       `);
       db.run(`
@@ -34,6 +35,13 @@ export async function initDb() {
           status text,
           compile_output text,
           PRIMARY KEY (submission, test_num)
+        )
+      `);
+      db.run(`
+        CREATE TABLE IF NOT EXISTS Participants (
+          user numeric REFERENCES Users(id),
+          contest text,
+          PRIMARY KEY (user, contest)
         )
       `, (err) => (err) ? reject(err) : resolve(true));
     });

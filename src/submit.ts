@@ -2,7 +2,7 @@ import fileUpload, { UploadedFile } from 'express-fileupload';
 import { access, readdir, readFile } from 'fs/promises';
 import createError, { HttpError } from 'http-errors';
 import fs from 'fs';
-import { contestProblemsHaveScore, DbPromise, getChallengeConfig, getChallengeTests, getContestConfig, throwError } from './helper';
+import { contestProblemsHaveScore, DbPromise, getChallengeConfig, getChallengeTests, getContestConfig, getContestProblems, throwError } from './helper';
 import { v4 } from 'uuid';
 import { db, judgeSecret } from './server';
 import config from '../config.json';
@@ -31,15 +31,8 @@ export async function submit(files: fileUpload.FileArray | null | undefined, own
     throw createError(400, 'No such challenge.');
   }
   
-  const contest_config = await getContestConfig(contest);
-  if (contestProblemsHaveScore(contest_config)) {
-    if (!contest_config.problems.map(x => x.name).includes(challenge)) {
-      throw createError(400, 'Challenge not in contest.');
-    }
-  } else {
-    if (!contest_config.problems.includes(challenge)) {
-      throw createError(400, 'Challenge not in contest.');
-    }
+  if (!(await getContestProblems(contest)).includes(challenge)) {
+    throw createError(400, 'Challenge not in contest.');
   }
 
   const challenge_config = await getChallengeConfig(challenge);
@@ -56,7 +49,7 @@ export async function submit(files: fileUpload.FileArray | null | undefined, own
         
         await Promise.all([
           (files.src as UploadedFile).mv(`./upload/${submission}`),
-          DbPromise(db, 'run', 'INSERT INTO Submissions VALUES (?, ?, ?, ?, ?, ?)', [submission_id, owner, contest, challenge, null, submission])
+          DbPromise(db, 'run', 'INSERT INTO Submissions VALUES (?, ?, ?, ?, ?, ?, ?)', [submission_id, owner, contest, challenge, null, submission, Date.now()])
         ]);
     
         src = await readFile(`./upload/${submission}`, { encoding: 'utf8' });
