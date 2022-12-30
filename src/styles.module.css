@@ -1,0 +1,26 @@
+.pageWrapper {
+  padding: 20px;
+}
+
+.bold {
+  font-weight: 700;
+}
+
+.tableRow {
+  cursor: pointer;
+}
+
+.tableRow:hover {
+  background-color: #eeeeee;
+}
+
+.returnLink {
+  font-style: italic;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.boxOutline {
+  border: 1px solid;
+  padding: 8px;
+}
