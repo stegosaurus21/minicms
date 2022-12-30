@@ -33,6 +33,7 @@ const Results = (props: TokenProp) => {
   const [username, setUsername] = useState<string | null>(null);
   const [viewable, setViewable] = useState<boolean | null>(null);
   const [scoring, setScoring] = useState<Scoring>();
+  const [source, setSource] = useState<string>('');
 
   const subtaskMaxScore = (task: number) => {
     if (scoring === undefined || scoring.scoring === undefined) return 0;
@@ -85,6 +86,11 @@ const Results = (props: TokenProp) => {
     }).then((res) => {
       setIndex(res.submissions.find((x: Submission) => x.token === params['submission']).index);
       setViewable(true);
+      return makeBackendRequest('GET', '/results/source', token, {
+        submission: params['submission']
+      });
+    }).then((res) => {
+      setSource(res.src);
       return makeBackendRequest('GET', '/results', token, {
         submission: params['submission']
       });
@@ -179,7 +185,10 @@ const Results = (props: TokenProp) => {
         <Container className='border mt-3 p-2'>
           {(results[0] && results[0].compile_output !== '') ? <pre><samp>{Buffer.from(results[0].compile_output, 'base64').toString()}</samp></pre> : <><Spinner as="span" size="sm" animation="border"></Spinner> Checking</>}
         </Container>
-        
+        <h2 className='mt-3'>Source code</h2>
+        <Container className='border mt-3 p-2'>
+          <pre><code>{source}</code></pre>
+        </Container>
       </Container>
     )
   }
