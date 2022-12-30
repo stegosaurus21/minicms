@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Accordion, Badge, Button, Container, Spinner, Table } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
 import { TokenProp } from 'src/App';
-import { makeBackendRequest, onLoggedIn, parseMemory, round2dp, styleScore, styleStatus } from 'src/helper';
+import { makeBackendRequest, onLoggedIn, parseMemory, prettyDate, round2dp, styleScore, styleStatus } from 'src/helper';
 import { config } from '../config';
 import style from '../styles.module.css';
 import { Buffer } from 'buffer';
@@ -29,7 +29,8 @@ const Results = (props: TokenProp) => {
   const [problemName, setProblemName] = useState<string>('');
   const [score, setScore] = useState<number | null>(null);
   const [maxScore, setMaxScore] = useState<number>(0);
-  const [index, setIndex] = useState<number>(-1);
+  const [index, setIndex] = useState<number>(0);
+  const [time, setTime] = useState<number>(0);
   const [username, setUsername] = useState<string | null>(null);
   const [viewable, setViewable] = useState<boolean | null>(null);
   const [scoring, setScoring] = useState<Scoring>();
@@ -84,7 +85,9 @@ const Results = (props: TokenProp) => {
         challenge: params['challenge']
       });
     }).then((res) => {
-      setIndex(res.submissions.find((x: Submission) => x.token === params['submission']).index);
+      const thisSubmission = res.submissions.find((x: Submission) => x.token === params['submission']);
+      setIndex(thisSubmission.index);
+      setTime(thisSubmission.time);
       setViewable(true);
       return makeBackendRequest('GET', '/results/source', token, {
         submission: params['submission']
@@ -132,7 +135,7 @@ const Results = (props: TokenProp) => {
       <Container>
         <span className={style.returnLink} onClick={() => navigate('./..')}>{'<'} Back to challenge</span>
         <h1 className="mt-1">{problemName} {score === null ? <Spinner as="span" animation="border"></Spinner> : <Badge bg={styleScore(score, maxScore)}>{`${round2dp(score)}/${maxScore}`}</Badge>}</h1>
-        <p className={style.bold}>Submission #{index}</p>
+        <p className={style.bold}>Submission #{index} - {prettyDate(time)}</p>
         {scoring.scoring
         ? <Accordion alwaysOpen defaultActiveKey={scoring.scoring.map((_, i) => `${i + 1}`)}>
           {scoring.scoring.map((x, i) => <Accordion.Item eventKey={`${i + 1}`}>
