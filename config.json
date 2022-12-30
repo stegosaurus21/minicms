@@ -3,7 +3,7 @@
   "BACKEND_PORT": "8080",
   "JUDGE_URL": "localhost",
   "JUDGE_PORT": "2358",
-
+  "disabled_languages": [48, 52, 49, 53, 44, 43, 89, 75, 76],
   "time_limit": 1.0,
   "memory_limit": 131072
 }

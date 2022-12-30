@@ -26,6 +26,9 @@ export async function submit(files: fileUpload.FileArray | null | undefined, own
   if (language_id === undefined || language_id === null) {
     throw createError(400, 'No language specified.');
   }
+  if (config.disabled_languages.includes(language_id)) {
+    throw createError(400, 'This language is disabled.');
+  }
   const challenge_dir = `./challenges/${challenge}`;
   try {
     await access(challenge_dir, fs.constants.F_OK);

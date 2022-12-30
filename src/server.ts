@@ -269,7 +269,7 @@ const server = app.listen(parseInt(config.BACKEND_PORT), config.BACKEND_URL,
     const languagesReq = await fetch(`http://${config.JUDGE_URL}:${config.JUDGE_PORT}/languages`, {
       method: 'GET' 
     });
-    judgeLanguages = await languagesReq.json();
+    judgeLanguages = (await languagesReq.json()).filter(x => !config.disabled_languages.includes(x.id));
     console.log(`server started on port ${parseInt(config.BACKEND_PORT)} at ${config.BACKEND_URL}`);
   }
 );
