@@ -4,6 +4,7 @@ import { db } from './server';
 import { Resolve, ResolveCounter, Result, Subtask } from './types';
 import { contestChallengesHaveScore, getContestConfig, getContestChallenges } from './contest';
 import { getChallengeConfig, getChallengeTests } from './challenge';
+import { readFile } from 'fs/promises';
 
 export const awaitTest: Map<String, Resolve> = new Map<String, Resolve>();
 export const awaitResult: Map<String, Resolve> = new Map<String, Resolve>();
@@ -246,4 +247,9 @@ export async function checkSubmissionAuth(uId: number, submission: string) {
   `, [submission]);
   if (owner['owner'] === uId) return;
   throw createError(403, 'Cannot access this submission.');
+}
+
+export async function getSource(submission: string) {
+  const src = await readFile(`./upload/${submission}`, { encoding: 'utf8' });
+  return { src: src };
 }

@@ -4,7 +4,7 @@ import cors from 'cors';
 import fileUpload from 'express-fileupload';
 import sqlite3 from 'sqlite3';
 import { submit } from './submit';
-import { checkSubmissionAuth, getChallengeResults, getLeaderboard, getResult, getTest, judgeCallback, processResult } from './results';
+import { checkSubmissionAuth, getChallengeResults, getLeaderboard, getResult, getSource, getTest, judgeCallback, processResult } from './results';
 import { clear, errorHandler, initDb } from './other';
 import morgan from 'morgan';
 import { auth, getUser, getUsername, login, logout, register } from './auth';
@@ -221,6 +221,18 @@ app.get('/results', async (req, res, next) => {
     const user = await getUser(req);
     await checkSubmissionAuth(user, submission);
     return res.json(await getResult(submission));
+  } catch (err) {
+    next(err);
+  }
+});
+
+
+app.get('/results/source', async (req, res, next) => {
+  try {
+    const submission = req.query.submission as string;
+    const user = await getUser(req);
+    await checkSubmissionAuth(user, submission);
+    return res.json(await getSource(submission));
   } catch (err) {
     next(err);
   }
