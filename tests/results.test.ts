@@ -1,4 +1,4 @@
-import { clear, ExpectState, testGetChallengeResults, testGetLeaderboard, testGetSubmissionScore, testGetTestResult, testLogin, testRegister, testSubmit, testSubmitAndWait } from './testHelper';
+import { clear, ExpectState, testContestJoin, testGetChallengeResults, testGetLeaderboard, testGetSubmissionScore, testGetTestResult, testLogin, testRegister, testSubmit, testSubmitAndWait } from './testHelper';
 
 let userToken;
 
@@ -6,6 +6,7 @@ beforeAll(async () => {
   await clear();
   await testRegister('user1', 'pass1');
   userToken = await testLogin('user1', 'pass1');
+  await testContestJoin(userToken, 'tests/simple');
 });
 
 describe('results', () => {
@@ -46,56 +47,65 @@ describe('results', () => {
       userToken = await testLogin('user1', 'pass1');
       const userToken0 = await testLogin('user0', 'pass0');
       expect(await testGetLeaderboard(userToken, 'tests/simple', ExpectState.SUCCESS)).toStrictEqual({
+        max_scores: [100, 80],
         leaderboard: []
       });
+      await testContestJoin(userToken, 'tests/simple');
       await testSubmitAndWait(userToken, './tests/simple_io/overflow.cpp', 54, 'tests/simple', 'tests/simple_io_subtasks');
       expect(await testGetLeaderboard(userToken, 'tests/simple', ExpectState.SUCCESS)).toStrictEqual({
+        max_scores: [100, 80],
         leaderboard: [
-          ['user1', [0, 30]]
+          {name: 'user1', scores: [0, 30]}
         ]
       });
+      await testContestJoin(userToken2, 'tests/simple');
       await testSubmitAndWait(userToken2, './tests/simple_io/pass.py', 71, 'tests/simple', 'tests/simple_io');
-      expect(await testGetLeaderboard(userToken2, 'tests/simple')).toStrictEqual([
-        ['user2', [100, 0]],
-        ['user1', [0, 30]]
+      expect((await testGetLeaderboard(userToken2, 'tests/simple')).leaderboard).toStrictEqual([
+        {name: 'user2', scores: [{score: 100, count: 1}, {score: 0, count: 0}]},
+        {name: 'user1', scores: [{score: 0, count: 0}, {score: 30, count: 1}]}
       ]);
+      await testContestJoin(userToken0, 'tests/simple');
       await testSubmitAndWait(userToken, './tests/simple_io/pass.py', 71, 'tests/simple', 'tests/simple_io_subtasks');
-      expect(await testGetLeaderboard(userToken, 'tests/simple')).toStrictEqual([
-        ['user2', [100, 0]],
-        ['user1', [0, 80]]
+      expect((await testGetLeaderboard(userToken, 'tests/simple')).leaderboard).toStrictEqual([
+        {name: 'user2', scores: [{score: 100, count: 1}, {score: 0, count: 0}]},
+        {name: 'user1', scores: [{score: 0, count: 0}, {score: 80, count: 2}]},
+        {name: 'user0', scores: [{score: 0, count: 0}, {score: 0, count: 0}]}
       ]);
       await testSubmitAndWait(userToken, './tests/simple_io/pass.py', 71, 'tests/simple', 'tests/simple_io');
-      expect(await testGetLeaderboard(userToken2, 'tests/simple')).toStrictEqual([
-        ['user1', [100, 80]],
-        ['user2', [100, 0]]
+      expect((await testGetLeaderboard(userToken2, 'tests/simple')).leaderboard).toStrictEqual([
+        {name: 'user1', scores: [{score: 100, count: 1}, {score: 80, count: 2}]},
+        {name: 'user2', scores: [{score: 100, count: 1}, {score: 0, count: 0}]},
+        {name: 'user0', scores: [{score: 0, count: 0}, {score: 0, count: 0}]}
       ]);
       await testSubmitAndWait(userToken2, './tests/simple_io/compile_error.cpp', 54, 'tests/simple', 'tests/simple_io');
-      expect(await testGetLeaderboard(userToken, 'tests/simple')).toStrictEqual([
-        ['user1', [100, 80]],
-        ['user2', [100, 0]]
+      expect((await testGetLeaderboard(userToken, 'tests/simple')).leaderboard).toStrictEqual([
+        {name: 'user1', scores: [{score: 100, count: 1}, {score: 80, count: 2}]},
+        {name: 'user2', scores: [{score: 100, count: 2}, {score: 0, count: 0}]},
+        {name: 'user0', scores: [{score: 0, count: 0}, {score: 0, count: 0}]}
       ]);
       await testSubmitAndWait(userToken2, './tests/simple_io/pass.py', 71, 'tests/simple', 'tests/simple_io_subtasks');
-      expect(await testGetLeaderboard(userToken2, 'tests/simple')).toStrictEqual([
-        ['user1', [100 ,80]],
-        ['user2', [100, 80]]
+      expect((await testGetLeaderboard(userToken2, 'tests/simple')).leaderboard).toStrictEqual([
+        {name: 'user1', scores: [{score: 100, count: 1}, {score: 80, count: 2}]},
+        {name: 'user2', scores: [{score: 100, count: 2}, {score: 80, count: 1}]},
+        {name: 'user0', scores: [{score: 0, count: 0}, {score: 0, count: 0}]}
       ]);
       await testSubmitAndWait(userToken0, './tests/simple_io/pass.py', 71, 'tests/simple', 'tests/simple_io_subtasks');
       await testSubmitAndWait(userToken0, './tests/simple_io/pass.py', 71, 'tests/simple', 'tests/simple_io');
-      expect(await testGetLeaderboard(userToken0, 'tests/simple')).toStrictEqual([
-        ['user0', [100 ,80]],
-        ['user1', [100 ,80]],
-        ['user2', [100, 80]]
+      expect((await testGetLeaderboard(userToken0, 'tests/simple')).leaderboard).toStrictEqual([
+        {name: 'user0', scores: [{score: 100, count: 1}, {score: 80, count: 2}]},
+        {name: 'user1', scores: [{score: 100, count: 2}, {score: 80, count: 1}]},
+        {name: 'user2', scores: [{score: 100, count: 1}, {score: 80, count: 1}]}
       ]);
       expect(await testGetChallengeResults(userToken2, 'tests/simple', 'tests/simple_io', ExpectState.SUCCESS)).toStrictEqual({
         submissions: [
-          { time: expect.any(Number), token: expect.any(String), score: 0 },
-          { time: expect.any(Number), token: expect.any(String), score: 100 }
+          { time: expect.any(Number), token: expect.any(String), score: 0 , index: 2},
+          { time: expect.any(Number), token: expect.any(String), score: 100, index: 1 }
         ]
       });
       expect(await testGetChallengeResults(userToken, 'tests/simple', 'tests/simple_io_subtasks', ExpectState.SUCCESS)).toStrictEqual({
         submissions: [
-          { time: expect.any(Number), token: expect.any(String), score: 80 },
-          { time: expect.any(Number), token: expect.any(String), score: 30 }
+          { time: expect.any(Number), token: expect.any(String), score: 80, index: 2 },
+          { time: expect.any(Number), token: expect.any(String), score: 30, index: 1 }
         ]
       });
     });

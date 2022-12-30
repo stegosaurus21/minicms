@@ -1,4 +1,4 @@
-import { clear, ExpectState, testGetChallengeScoring, testGetTestResult, testLogin, testRegister, testSubmit } from "./testHelper";
+import { clear, ExpectState, testContestJoin, testGetChallengeScoring, testGetTestResult, testLogin, testRegister, testSubmit } from "./testHelper";
 
 beforeEach(async () => { await clear() });
 
@@ -30,6 +30,7 @@ describe('auth', () => {
     test('invalid user token for auth routes', async () => {
       await testRegister('user1', 'pass1');
       const userToken = await testLogin('user1', 'pass1');
+      await testContestJoin(userToken, 'tests/simple');
       const submissionToken = await testSubmit(userToken, './tests/simple_io/pass.py', 71, 'tests/simple', 'tests/simple_io');
 
       await testSubmit(undefined, './tests/simple_io/pass.py', 71, 'tests/simple', 'tests/simple_io', ExpectState.FAILURE);

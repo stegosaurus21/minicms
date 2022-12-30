@@ -1,15 +1,18 @@
 {
   "name": "Sample Problem",
   "type": "SIMPLE_IO",
+  "time_limit": 0.5,
   "scoring": [
     {
       "weight": 50,
       "mode": "BATCH",
+      "constraints": "Sample constraint for the first subtask.",
       "tasks": ["0", "1"]
     },
     {
       "weight": 50,
       "mode": "INDIVIDUAL",
+      "constraints": ["First constraint for the second subtask.", "Second constraint, with **Markdown**: $N > 1000$"],
       "tasks": ["2", "3"]
     }
   ] 

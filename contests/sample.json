@@ -1,9 +1,6 @@
 {
   "name": "Sample Contest",
-  "problems": [
-    {
-      "name": "sample",
-      "score": 100
-    }
+  "challenges": [
+    "sample"
   ]
 }

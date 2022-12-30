@@ -87,6 +87,10 @@ export async function login(username: string, password: string) {
   }
 }
 
+export function logout(token: string) {
+  tokens.delete(token);
+}
+
 export async function getUser(req: Request) {
   const token = req.header('token');
   const session = tokens.get(token);
@@ -96,6 +100,16 @@ export async function getUser(req: Request) {
   }
 
   return session.uId;
+}
+
+export async function getUsername(req: Request) {
+  const uId = await getUser(req);
+  const row = await DbPromise(db, 'get', `
+    SELECT u.username
+    FROM Users u
+    WHERE u.id = ?
+  `, [uId]);
+  return row['username'];
 }
 
 export const auth = (req: Request, res, next) => {

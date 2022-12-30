@@ -1,5 +1,6 @@
-import { rm } from 'fs/promises';
+import { readdir, rm } from 'fs/promises';
 import { DbUserQueue, tokens } from './auth';
+import { DbJoinQueue } from './contest';
 import { awaitResult, awaitScoring, awaitTest } from './results';
 import { db } from './server';
 import { DbSubmissionQueue } from './submit';
@@ -51,12 +52,16 @@ export async function initDb() {
 export async function clear() { 
   DbSubmissionQueue.splice(0);
   DbUserQueue.splice(0);
+  DbJoinQueue.splice(0);
   tokens.clear();
   awaitTest.clear();
   awaitScoring.clear();
   awaitResult.clear();
   await new Promise((resolve, reject) => { 
     db.serialize(() => {
+      db.run(`
+        DELETE FROM Participants
+      `);
       db.run(`
         DELETE FROM Results
       `);

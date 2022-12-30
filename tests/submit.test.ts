@@ -1,4 +1,4 @@
-import { clear, testSubmit, ExpectState, testRegister, testLogin } from './testHelper';
+import { clear, testSubmit, ExpectState, testRegister, testLogin, testContestJoin } from './testHelper';
 
 let userToken;
 
@@ -6,6 +6,7 @@ beforeAll(async () => {
   await clear();
   await testRegister('user1', 'pass1');
   userToken = await testLogin('user1', 'pass1');
+  await testContestJoin(userToken, 'tests/simple');
 });
 
 describe('submit', () => {

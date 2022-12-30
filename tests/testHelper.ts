@@ -39,6 +39,21 @@ export async function testLogin(username: string, password: string, expectSucces
   return body;
 }
 
+export async function testContestJoin(token: string, contest: string, expectSuccess: ExpectState = ExpectState.SUCCESS_NO_CHECK) {
+  const res = await fetch(`http://${config.BACKEND_URL}:${config.BACKEND_PORT}/contest/join`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'token': token },
+    body: JSON.stringify({ contest: contest })
+  });
+  const body = await res.json();
+  expect(res.ok).toStrictEqual(expectSuccess !== ExpectState.FAILURE);
+  if (expectSuccess === ExpectState.SUCCESS_NO_CHECK) return body;
+  
+  if (expectSuccess === ExpectState.SUCCESS) expect(body).toStrictEqual({});
+  else expect(body).toStrictEqual({ error: expect.any(String) });
+  return body;
+}
+
 export async function testSubmitAndWait(userToken: string, path: string, language_id: number, contest: string, challenge: string):
   Promise<{ token: string, score: number }> {
   const token = await testSubmit(userToken, path, language_id, contest, challenge);
@@ -85,7 +100,7 @@ export async function testGetChallengeScoring(userToken: string, challenge: stri
 }
 
 export async function testGetSubmissionScore(userToken: string, submission: string, expectSuccess: ExpectState = ExpectState.SUCCESS_NO_CHECK) {
-  const res = await fetch(`http://${config.BACKEND_URL}:${config.BACKEND_PORT}/results/score?${new URLSearchParams({ submission: submission })}`, {
+  const res = await fetch(`http://${config.BACKEND_URL}:${config.BACKEND_PORT}/results?${new URLSearchParams({ submission: submission })}`, {
     method: 'GET',
     headers: { 'token': userToken }
   });
@@ -105,9 +120,9 @@ export async function testGetLeaderboard(userToken: string, contest: string, exp
   });
   const body = await res.json();
   expect(res.ok).toStrictEqual(expectSuccess !== ExpectState.FAILURE);
-  if (expectSuccess === ExpectState.SUCCESS_NO_CHECK) return body['leaderboard'];
+  if (expectSuccess === ExpectState.SUCCESS_NO_CHECK) return body;
 
-  if (expectSuccess === ExpectState.SUCCESS) expect(body).toStrictEqual({ leaderboard: expect.any(Object) });
+  if (expectSuccess === ExpectState.SUCCESS) expect(body).toStrictEqual({ max_scores: expect.any(Object), leaderboard: expect.any(Object) });
   else expect(body).toStrictEqual({ error: expect.any(String) });
   return body;
 }

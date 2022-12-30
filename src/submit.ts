@@ -2,13 +2,15 @@ import fileUpload, { UploadedFile } from 'express-fileupload';
 import { access, readdir, readFile } from 'fs/promises';
 import createError, { HttpError } from 'http-errors';
 import fs from 'fs';
-import { contestProblemsHaveScore, DbPromise, getChallengeConfig, getChallengeTests, getContestConfig, getContestProblems, throwError } from './helper';
+import { DbPromise } from './helper';
 import { v4 } from 'uuid';
 import { db, judgeSecret } from './server';
 import config from '../config.json';
 import { SubmitReturn, Token } from './types';
 import fetch, { Response } from 'node-fetch';
 import { awaitScoring } from './results';
+import { contestIsOpen, getContestChallenges } from './contest';
+import { getChallengeConfig, getChallengeTests } from './challenge';
 
 export const DbSubmissionQueue = [];
 
@@ -30,8 +32,12 @@ export async function submit(files: fileUpload.FileArray | null | undefined, own
   } catch (err) {
     throw createError(400, 'No such challenge.');
   }
+
+  if (!(await contestIsOpen(contest))) {
+    throw createError(403, 'Contest is closed.');
+  }
   
-  if (!(await getContestProblems(contest)).includes(challenge)) {
+  if (!(await getContestChallenges(contest)).includes(challenge)) {
     throw createError(400, 'Challenge not in contest.');
   }
 
@@ -82,7 +88,6 @@ export async function submit(files: fileUpload.FileArray | null | undefined, own
     
     const inputs = IOs.slice(0, files.length);
     const outputs = IOs.slice(files.length, IOs.length);
-    
     const responses = await Promise.all(inputs.map(
       (input, i) => fetch(`http://${config.JUDGE_URL}:${config.JUDGE_PORT}/submissions`, {
         method: 'POST',
@@ -92,8 +97,8 @@ export async function submit(files: fileUpload.FileArray | null | undefined, own
           language_id: language_id,
           stdin: input,
           expected_output: outputs[i],
-          cpu_time_limit: challenge_config_exists ? challenge_config.time_limit : config.time_limit,
-          memory_limit: challenge_config_exists ? challenge_config.memory_limit : config.memory_limit,
+          cpu_time_limit: (challenge_config_exists ? (challenge_config.time_limit || config.time_limit) : config.time_limit),
+          memory_limit: (challenge_config_exists ? (challenge_config.memory_limit || config.memory_limit) : config.memory_limit),
           callback_url: `http://${config.BACKEND_URL === '0.0.0.0' ? 'host.docker.internal' : config.BACKEND_URL}:${config.BACKEND_PORT}/callback/${judgeSecret}/${submission_id}/${i}/${Date.now()}`
         })
       })

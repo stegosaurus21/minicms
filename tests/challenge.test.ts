@@ -1,4 +1,4 @@
-import { clear, testGetChallengeScoring, testLogin, testRegister } from "./testHelper";
+import { clear, testContestJoin, testGetChallengeScoring, testLogin, testRegister } from "./testHelper";
 
 let userToken;
 
@@ -6,6 +6,7 @@ beforeAll(async () => {
   await clear();
   await testRegister('user1', 'pass1');
   userToken = await testLogin('user1', 'pass1');
+  await testContestJoin(userToken, 'tests/simple');
 });
 
 describe('challenge', () => {

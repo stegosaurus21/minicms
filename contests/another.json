@@ -1,0 +1,8 @@
+{
+  "name": "Another Test Contest",
+  "challenges": [
+    "sample",
+    "tests/simple_io",
+    "tests/simple_io_subtasks"
+  ]
+}

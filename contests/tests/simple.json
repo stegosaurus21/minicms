@@ -1,6 +1,8 @@
 {
-  "name": "Sample Contest",
-  "problems": [
+  "name": "Test Contest",
+  "starts": "00:00 01/01/2022",
+  "ends": "01:10 10/10/2023",
+  "challenges": [
     {
       "name": "tests/simple_io",
       "score": 100
