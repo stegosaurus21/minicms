@@ -1,121 +1,237 @@
-import { DbPromise } from './helper';
-import createError, { HttpError } from 'http-errors';
-import { db } from './server';
-import { Resolve, ResolveCounter, Result, Subtask } from './types';
-import { contestChallengesHaveScore, getContestConfig, getContestChallenges } from './contest';
-import { getChallengeConfig, getChallengeTests } from './challenge';
-import { readFile } from 'fs/promises';
+import { parseTime } from "./helper";
+import createError, { HttpError } from "http-errors";
+import { prisma } from "./server";
+import {
+  ChallengeResult,
+  ContestChallenge,
+  LeaderboardEntry,
+  Resolve,
+  ResolveCounter,
+  Result,
+} from "./interface";
+import { getContestInternal } from "./contest";
+import { getChallengeInternal } from "./challenge";
+import { readFile } from "fs/promises";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { publicProcedure, router } from "./trpc";
+import { protectedProcedure } from "./auth";
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 
 export const awaitTest: Map<String, Resolve> = new Map<String, Resolve>();
 export const awaitResult: Map<String, Resolve> = new Map<String, Resolve>();
-export const awaitScoring: Map<String, ResolveCounter> = new Map<String, ResolveCounter>();
+export const awaitScoring: Map<String, ResolveCounter> = new Map<
+  String,
+  ResolveCounter
+>();
 
+const publicResultsProcedure = protectedProcedure
+  .input(z.object({ submission: z.string() }))
+  .use(async ({ input, next }) => {
+    const { submission } = input;
+    await checkSubmissionExists(submission);
+    return next();
+  });
+const protectedResultsProcedure = publicResultsProcedure.use(
+  async ({ input, ctx, next }) => {
+    const { submission } = input;
+    const { uId } = ctx;
+    await checkSubmissionAuth(uId, submission);
+    return next();
+  }
+);
+
+export const resultsRouter = router({
+  getScore: protectedResultsProcedure.query(async ({ input }) => {
+    const { submission } = input;
+    return await getResult(submission);
+  }),
+
+  getTest: protectedResultsProcedure
+    .input(z.object({ test: z.number() }))
+    .query(async ({ input, ctx }) => {
+      const { submission, test } = input;
+      return await getTest(submission, test);
+    }),
+
+  getSource: protectedResultsProcedure.query(async ({ input }) => {
+    const { submission } = input;
+    return await getSource(submission);
+  }),
+
+  getLeaderboard: publicProcedure
+    .input(z.object({ contest: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const { contest } = input;
+      const { uId } = ctx;
+      return await getLeaderboard(contest);
+    }),
+
+  validate: publicResultsProcedure.query(async ({ input, ctx }) => {
+    const { submission } = input;
+    const { uId } = ctx;
+    try {
+      await checkSubmissionAuth(uId, submission);
+      return { isViewable: true };
+    } catch {
+      return { isViewable: false };
+    }
+  }),
+});
+
+/**
+ * Gets the challenge associated with a given submission
+ *
+ * @param {string} submission - the submission ID to get the challenge for
+ * @returns {Promise<string>} - the challenge ID the submission is for
+ */
 async function getSubmissionChallenge(submission: string): Promise<string> {
   try {
     await checkSubmissionExists(submission);
 
-    const row = await DbPromise(db, 'get', `
-      SELECT s.challenge
-      FROM Submissions s
-      WHERE s.token = ?
-    `, [submission]);
-
-    return row['challenge'];
+    return (
+      await prisma.submission.findUniqueOrThrow({
+        select: { challenge: true },
+        where: { token: submission },
+      })
+    ).challenge;
   } catch (err) {
-    if (err instanceof HttpError) throw err;
-    throw createError(500, 'Results error');
+    if (err instanceof PrismaClientKnownRequestError) {
+      if (err.code === "P2025") {
+        throw createError(400, "Submission not found.");
+      } else throw err;
+    } else if (err instanceof HttpError) throw err;
+    else throw err;
   }
 }
 
-async function getSubmissionTestCount(submission: string): Promise<number> {
-  return (await getChallengeTests(await getSubmissionChallenge(submission))).length;
+async function getTestInternal(submission: string, test_num: number) {
+  return await prisma.result.findUniqueOrThrow({
+    select: {
+      token: true,
+      time: true,
+      memory: true,
+      status: true,
+      compile_output: true,
+    },
+    where: {
+      submission_token_test_num: {
+        submission_token: submission,
+        test_num: test_num,
+      },
+    },
+  });
 }
 
+/**
+ * Gets the results of a given submission and test.
+ *
+ * @param {string} submission - the submission ID to get tests for
+ * @param {number} test_num - the index of the test to get
+ * @returns
+ */
 export async function getTest(submission: string, test_num: number) {
-  const numTests = (await getSubmissionTestCount(submission));
+  const numTests = (
+    await getChallengeInternal(await getSubmissionChallenge(submission))
+  ).tests.length;
 
   if (test_num < 0 || test_num >= numTests) {
-    throw createError(404, 'Test not found.');
+    throw createError(404, "Test not found.");
   }
 
-  const exists = await DbPromise(db, 'get', `
-    SELECT count(r.token) AS count
-    FROM Results r
-    JOIN Submissions s ON s.id = r.submission
-    WHERE s.token = ? AND r.test_num = ?
-  `, [submission, test_num]);
-
-  if (exists['count'] === 0) {
-    await new Promise((resolve, reject) => {
-      awaitTest.set(`${submission}/${test_num}`, resolve);
-    });
-    return getTest(submission, test_num);
+  try {
+    return await getTestInternal(submission, test_num);
+  } catch (e) {
+    if (e instanceof PrismaClientKnownRequestError) {
+      if (e.code === "P2025") {
+        await new Promise((resolve, reject) => {
+          awaitTest.set(`${submission}/${test_num}`, resolve);
+        });
+        return getTestInternal(submission, test_num);
+      } else throw e;
+    } else throw e;
   }
-
-  const row = await DbPromise(db, 'get', `
-    SELECT r.token, r.time, r.memory, r.status, r.compile_output
-    FROM Results r
-    JOIN Submissions s ON s.id = r.submission
-    WHERE s.token = ? AND r.test_num = ?
-  `, [submission, test_num]) as Result;
-  
-  return {
-    time: row.time,
-    memory: row.memory,
-    status: row.status,
-    compile_output: row.compile_output
-  };
 }
 
 export async function checkSubmissionExists(submission: string) {
-  let exists = await DbPromise(db, 'get', `
-    SELECT count(s.token) AS count
-    FROM Submissions s
-    WHERE s.token = ?
-  `, [submission]);
-
-  if (exists['count'] === 0) throw createError(400, 'No such submission.');
-  return true;
+  try {
+    await prisma.submission.findUniqueOrThrow({ where: { token: submission } });
+    return true;
+  } catch (e) {
+    if (e instanceof PrismaClientKnownRequestError) {
+      if (e.code === "P2025") {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Submission not found.",
+        });
+      }
+    }
+    throw e;
+  }
 }
 
-export async function getResult(submission: string) {
-  await checkSubmissionExists(submission);
+async function getResultInternal(submission: string) {
+  try {
+    return await prisma.submission.findUniqueOrThrow({
+      select: { score: true },
+      where: { token: submission },
+    });
+  } catch (e) {
+    if (e instanceof PrismaClientKnownRequestError) {
+      if (e.code === "P2025") {
+        return { score: null };
+      }
+    }
+    throw e;
+  }
+}
 
-  let row = await DbPromise(db, 'get', `
-    SELECT s.score, s.contest, s.challenge, s.owner
-    FROM Submissions s
-    WHERE s.token = ?
-  `, [submission]);
-
-  if (row['score'] === null) {
+export async function getResult(submission: string): Promise<{
+  score: number | null;
+}> {
+  let result = await getResultInternal(submission);
+  if (result.score === null) {
     await new Promise((resolve, reject) => {
       awaitResult.set(submission, resolve);
     });
-    return getResult(submission);
+    return await getResultInternal(submission);
   }
-  
-  const previousSubmissions = await getChallengeResults(row['owner'], row['contest'], row['challenge'], false);
-  return { score: row['score'] };
+
+  return result;
 }
 
-export async function judgeCallback(body: any, submission_id: number, test_num: number) {
-  await DbPromise(db, 'run', `
-    INSERT INTO Results 
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `, [submission_id, test_num, body.token, body.time || 0, body.memory || 0, body.status.description, body.compile_output || Buffer.from('Compilation successful.').toString('base64')]);
+export async function judgeCallback(
+  body: any,
+  submission: string,
+  test_num: number
+) {
+  await prisma.result.create({
+    data: {
+      submission: {
+        connect: { token: submission },
+      },
+      test_num: test_num,
+      token: body.token,
+      time: parseFloat(body.time) || 0,
+      memory: body.memory || 0,
+      status: body.status.description,
+      compile_output:
+        body.compile_output ||
+        Buffer.from("Compilation sucessful.").toString("base64"),
+    },
+  });
 
-  const submission = (await DbPromise(db, 'get', `
-    SELECT s.token AS token
-    FROM Submissions s
-    WHERE s.id = ?
-  `, [submission_id]))['token'];
-  
-  const waiter: Resolve | undefined = awaitTest.get(`${submission}/${test_num}`);
+  const waiter: Resolve | undefined = awaitTest.get(
+    `${submission}/${test_num}`
+  );
   if (waiter) {
     (waiter as Resolve)(true);
   }
 
   const scoreWaiter = awaitScoring.get(submission);
+  if (!scoreWaiter)
+    throw Error("Judge callback error: couldn't find associated submission.");
+
   scoreWaiter.counter -= 1;
   if (scoreWaiter.counter <= 0) {
     scoreWaiter.resolve(true);
@@ -123,60 +239,66 @@ export async function judgeCallback(body: any, submission_id: number, test_num: 
 }
 
 export async function processResult(submission: string) {
-  const rows = await DbPromise(db, 'all', `
-    SELECT r.test_num, r.status
-    FROM Results r
-    JOIN Submissions s ON r.submission = s.id
-    WHERE s.token = ?
-  `, [submission]);
+  const { challenge, contest } = await prisma.submission.findUniqueOrThrow({
+    select: { challenge: true, contest: true },
+    where: { token: submission },
+  });
 
-  const { challenge, contest } = (await DbPromise(db, 'get', `
-    SELECT s.challenge, s.contest
-    FROM Submissions s
-    WHERE s.token = ?
-  `, [submission])) as { challenge: string, contest: string };
+  const challenge_config = await getChallengeInternal(challenge);
+  const files = challenge_config.tests;
 
-  const challenge_config = await getChallengeConfig(challenge);
-  const files = await getChallengeTests(challenge);
-  
   let total_score;
   let submission_score = 0;
   if (challenge_config.scoring === undefined) {
     total_score = files.length;
-    let results = await Promise.all(files.map((_, i) => getTest(submission, i)));
-    submission_score = results.filter(result => result.status === 'Accepted').length;
+    let results = await Promise.all(
+      files.map((_, i) => getTest(submission, i))
+    );
+    submission_score = results.filter(
+      (result) => result.status === "Accepted"
+    ).length;
   } else {
-    const scoring = (challenge_config.scoring as Subtask[])
+    const scoring = challenge_config.scoring;
     total_score = scoring.reduce((sum, subtask) => sum + subtask.weight, 0);
     for (const subtask of scoring) {
-      let results = await Promise.all(subtask.tasks.map(t => getTest(submission, files.map(f => f.name).indexOf(t))));
+      let results = await Promise.all(
+        subtask.tasks.map((t) =>
+          getTest(submission, files.map((f) => f.name).indexOf(t))
+        )
+      );
       switch (subtask.mode) {
-        case 'BATCH':
-          if (results.find(result => result.status !== 'Accepted') === undefined) submission_score += subtask.weight;
+        case "BATCH":
+          if (
+            results.find((result) => result.status !== "Accepted") === undefined
+          )
+            submission_score += subtask.weight;
           break;
-        case 'INDIVIDUAL':
-          submission_score += subtask.weight * (results.filter(result => result.status === 'Accepted').length / results.length);
+        case "INDIVIDUAL":
+          submission_score +=
+            subtask.weight *
+            (results.filter((result) => result.status === "Accepted").length /
+              results.length);
           break;
       }
     }
   }
 
-  const contest_config = await getContestConfig(contest);
+  const contest_config = await getContestInternal(contest);
 
   let result = 0;
-  if (!contestChallengesHaveScore(contest_config)) {
-    result = 100;
-  } else {
-    result = contest_config.challenges.find(x => x.name === challenge).score;
-  }
+  result = (
+    contest_config.challenges.find(
+      (x) => x.id === challenge
+    ) as ContestChallenge
+  ).max_score;
+
   result *= submission_score;
   result /= total_score;
 
-  await DbPromise(db, 'run', `
-    UPDATE Submissions 
-    SET (score) = (?)
-    WHERE token = ?
-  `, [result, submission]);
+  await prisma.submission.update({
+    data: { score: result },
+    where: { token: submission },
+  });
 
   const waiter: Resolve | undefined = awaitResult.get(submission);
   if (waiter) {
@@ -185,54 +307,94 @@ export async function processResult(submission: string) {
 }
 
 export async function getLeaderboard(contest: string) {
-  const best_scores = (await DbPromise(db, 'all', `
-    SELECT u.username, s.challenge, coalesce(max(s.score), 0) AS score, count(s.token) AS count
-    FROM Participants p
-    JOIN Users u on p.user = u.id
-    LEFT OUTER JOIN Submissions s on s.owner = u.id
-    WHERE p.contest = ?
-    GROUP BY s.owner, s.challenge
-  `, [contest]) as { username: string, challenge: string, score: number, count: number }[]);
+  const contest_config = await getContestInternal(contest);
+  const contest_end = contest_config.ends
+    ? new Date(contest_config.ends)
+    : null;
+  const challenges = (await getContestInternal(contest)).challenges;
+  const challenge_map = challenges.reduce(
+    (prev, next, i) => prev.set(next.id, i),
+    new Map<string, number>()
+  );
 
-  const challenges = await getContestChallenges(contest);
-  const problem_index_map = challenges.reduce((prev, next, i) => prev.set(next, i), new Map<string, Number>());
+  const participants = await prisma.participant.findMany({
+    select: { user: { select: { username: true, id: true } }, time: true },
+    where: { contest: contest },
+  });
+  const participant_map = participants.reduce(
+    (prev, next) => prev.set(next.user.id, next.user.username),
+    new Map<number, string>()
+  );
 
-  const total_scores = best_scores.reduce((prev, next) => {
-    if (!prev[next.username]) prev[next.username] = challenges.map(x => ({score: 0, number: 0}));
-    if (next.count > 0) prev[next.username][problem_index_map.get(next.challenge)] = { score: next.score, count: next.count };
-    return prev;
-  }, {});
-
-  const result: {name: string, scores: {score: number, count: number}[]}[] = [];
-  for (const user in total_scores) {
-    result.push({name: user, scores: total_scores[user]});
+  const official: Record<string, LeaderboardEntry> = {};
+  const all: Record<string, LeaderboardEntry> = {};
+  for (const { user, time } of participants) {
+    if (contest_end == null || time < contest_end) {
+      official[user.username] = {
+        results: challenges.map((_) => ({
+          score: 0,
+          count: 0,
+        })),
+      };
+    }
+    all[user.username] = {
+      results: challenges.map((_) => ({
+        score: 0,
+        count: 0,
+      })),
+    };
   }
-  result.sort((a, b) => (b.scores.reduce((p, n) => p + n.score, 0) - (a.scores.reduce((p, n) => p + n.score, 0)) || a.name.localeCompare(b.name)));
 
-  const contest_config = await getContestConfig(contest);
-  let max_scores;
-  if (contestChallengesHaveScore(contest_config)) max_scores = contest_config.challenges.map(x => x.score);
-  else max_scores = challenges.map(x => 100);
+  (
+    await prisma.submission.groupBy({
+      by: ["owner_id", "challenge"],
+      where: {
+        contest: contest,
+      },
+      _max: { score: true },
+      _count: true,
+    })
+  ).forEach((item) => {
+    if (!challenge_map.has(item.challenge)) return;
+    all[participant_map.get(item.owner_id) as string].results[
+      challenge_map.get(item.challenge) as number
+    ] = { score: item._max.score || 0, count: item._count };
+  });
 
-  return {max_scores: max_scores, leaderboard: result};
+  if (contest_end) {
+    (
+      await prisma.submission.groupBy({
+        by: ["owner_id", "challenge"],
+        where: {
+          contest: contest,
+          time: { lt: contest_end },
+        },
+        _max: { score: true },
+        _count: true,
+      })
+    ).forEach((item) => {
+      if (!challenge_map.has(item.challenge)) return;
+      official[participant_map.get(item.owner_id) as string].results[
+        challenge_map.get(item.challenge) as number
+      ] = { score: item._max.score || 0, count: item._count };
+    });
+  }
+
+  return {
+    leaderboard: {
+      all: all,
+      official: official,
+    },
+  };
 }
 
-export async function getChallengeResults(uId: number, contest: string, challenge: string, score: boolean) {
-  const results = (await DbPromise(db, 'all', `
-    SELECT s.time, s.token, s.score
-    FROM Submissions s
-    WHERE (s.owner = ? AND s.contest = ? AND s.challenge = ?)
-    ORDER BY s.time DESC
-  `, [uId, contest, challenge])) as { time: number, token: string, score: number }[];
-
-  if (!score) return { submissions: results.map((x, i) => ({
-    time: x.time,
-    token: x.token,
-    score: x.score,
-    index: results.length - i
-  })) };
-  return { score: results.reduce((prev, next) => next.score > prev ? next.score : prev, 0) };
-}
+/* export async function getChallengeResults(
+  uId: number,
+  contest: string,
+  challenge: string
+): Promise<ChallengeResult> {
+  
+} */
 
 export async function checkSubmissionAuth(uId: number, submission: string) {
   try {
@@ -240,16 +402,16 @@ export async function checkSubmissionAuth(uId: number, submission: string) {
   } catch (err) {
     throw err;
   }
-  const owner = await DbPromise(db, 'get', `
-    SELECT s.owner
-    FROM Submissions s
-    WHERE s.token = ?
-  `, [submission]);
-  if (owner['owner'] === uId) return;
-  throw createError(403, 'Cannot access this submission.');
+
+  const owner = await prisma.submission.findUniqueOrThrow({
+    select: { owner_id: true },
+    where: { token: submission },
+  });
+  if (owner.owner_id === uId) return;
+  throw createError(403, "Cannot access this submission.");
 }
 
 export async function getSource(submission: string) {
-  const src = await readFile(`./upload/${submission}`, { encoding: 'utf8' });
+  const src = await readFile(`./upload/${submission}`, { encoding: "utf8" });
   return { src: src };
 }

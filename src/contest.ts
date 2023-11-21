@@ -1,184 +1,263 @@
 import { access, readdir, readFile } from "fs/promises";
-import { getTime, parse } from 'date-fns';
-import fs from 'fs';
-import createError, { HttpError } from 'http-errors';
-import { DbPromise, parseTime } from "./helper";
-import { db } from "./server";
-import { getChallengeConfig } from "./challenge";
-import { getChallengeResults } from "./results";
+import { getTime, parse } from "date-fns";
+import fs from "fs";
+import createError, { HttpError } from "http-errors";
+import { getPathLeaf, insertKeys, parseTime } from "./helper";
+import { getChallengeResults, getChallengeInternal } from "./challenge";
+import {
+  ChallengeResult,
+  Contest,
+  ContestChallenge,
+  ContestChallengeExternal,
+  ContestExternal,
+  ContestMeta,
+  ContestValidation,
+} from "./interface";
+import { prisma } from "./server";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { publicProcedure, router } from "./trpc";
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import { protectedProcedure } from "./auth";
 
-export async function explore(path: string, maxDepth: number = -1, depth: number = 0): Promise<string[]> {
+const publicContestProcedure = publicProcedure
+  .input(z.object({ contest: z.string() }))
+  .use(async ({ input, next }) => {
+    await checkContestExists(input.contest);
+    return next();
+  });
+
+const protectedContestProcedure = protectedProcedure
+  .input(z.object({ contest: z.string() }))
+  .use(async ({ input, next }) => {
+    await checkContestExists(input.contest);
+    return next();
+  });
+
+export const contestRouter = router({
+  list: publicProcedure.query(async () => {
+    const result: ContestMeta[] = [];
+    for (const path of await explore("./contests", ".json")) {
+      if (path.includes("hidden")) continue;
+      const contest = await getContestInternal(
+        path.slice("./contests/".length, -".json".length)
+      );
+      const contestMeta: ContestMeta = {
+        id: contest.id,
+        name: contest.name,
+        text: contest.text,
+        starts: contest.starts,
+        ends: contest.ends,
+      };
+      result.push(contestMeta);
+    }
+    result.sort((a, b) => a.name.localeCompare(b.name));
+    return result;
+  }),
+
+  get: publicContestProcedure.query(async ({ input, ctx }) => {
+    const { contest } = input;
+    const uId = ctx.uId;
+
+    const config = await getContestInternal(contest);
+    let text: string;
+    try {
+      await access(`./contests/${contest}.md`, fs.constants.F_OK);
+      text = await readFile(`./contests/${contest}.md`, { encoding: "utf8" });
+    } catch (err) {
+      console.log(err);
+      text = "This contest does not have a description.";
+    }
+
+    let challenges: ContestChallengeExternal[] = Array.from(
+      { length: config.challenges.length },
+      () => ({
+        id: "",
+        name: "",
+        max_score: 0,
+        score: 0,
+        submissions: 0,
+        challenges: [],
+      })
+    );
+    const canViewContest = uId && (await checkContestAuth(uId, contest)).joined;
+
+    await Promise.all(
+      config.challenges.map(async (challenge, i) => {
+        let results: ChallengeResult = { score: 0, submissions: [] };
+        if (canViewContest)
+          results = await getChallengeResults(contest, challenge.id, uId);
+
+        const name = (await getChallengeInternal(challenge.id)).name;
+        challenges[i] = {
+          name: canViewContest ? name : `Challenge ${i + 1}`,
+          max_score: challenge.max_score,
+          score: results.score,
+          submissions: results.submissions.length,
+          id: canViewContest ? challenge.id : "hidden",
+        };
+      })
+    );
+
+    return {
+      id: contest,
+      name: config.name || contest.split("/").slice(-1)[0],
+      text: text,
+      starts: config.starts || null,
+      ends: config.ends || null,
+      challenges: challenges,
+    };
+  }),
+
+  join: protectedContestProcedure.mutation(async ({ input, ctx }) => {
+    const { contest } = input;
+    const { uId } = ctx;
+    try {
+      return await prisma.participant.create({
+        data: {
+          user: {
+            connect: { id: uId },
+          },
+          contest: contest,
+          time: new Date(),
+        },
+      });
+    } catch (e) {
+      if (e instanceof PrismaClientKnownRequestError) {
+        if (e.code === "P2002") {
+          throw createError(400, "User already in contest.");
+        } else throw e;
+      } else throw e;
+    }
+  }),
+
+  validate: publicContestProcedure.query(
+    async ({ input, ctx }): Promise<ContestValidation> => {
+      const contest = input.contest;
+      if (!ctx.uId) return { joined: false, joinTime: null };
+      const uId = ctx.uId;
+
+      return await checkContestAuth(uId, contest);
+    }
+  ),
+});
+
+/**
+ * Returns a sorted list of JSON filenames in a listed directory.
+ * Explores recursively to a given depth.
+ *
+ * @param {number} path - the path to explore
+ * @param {string} fileExt - the file extension that the file name must end with
+ * @param {number} maxDepth - the maximum depth to explore to, or -1 for infinite depth
+ * @param {number} depth - starting depth, defaults to 0
+ * @returns {Promise<string[]>} - a sorted list of paths
+ */
+export async function explore(
+  path: string,
+  fileExt: string,
+  maxDepth: number = -1,
+  depth: number = 0
+): Promise<string[]> {
   const entries = await readdir(path, { withFileTypes: true });
-  let results = [];
+  let results: string[] = [];
   for (const entry of entries) {
-    if (entry.isFile() && entry.name.endsWith('.json')) results.push(`${path}/${entry.name}`);
-    else if (entry.isDirectory() && (maxDepth === -1 || depth < maxDepth)) results = results.concat(await explore(`${path}/${entry.name}`, maxDepth, depth + 1));
+    if (entry.isFile() && entry.name.endsWith(fileExt))
+      results.push(`${path}/${entry.name}`);
+    else if (entry.isDirectory() && (maxDepth === -1 || depth < maxDepth))
+      results = results.concat(
+        await explore(`${path}/${entry.name}`, fileExt, maxDepth, depth + 1)
+      );
   }
   results.sort();
   return results;
 }
 
-export async function getContest(contest: string) {
+/**
+ * Reads the contest configuration from file.
+ *
+ * @param {string} contest - the contest ID to read
+ * @returns {Contest} - the requested contest
+ */
+export async function getContestInternal(contest: string): Promise<Contest> {
   await checkContestExists(contest);
 
-  const config = await getContestConfig(contest);
-  let text: string;
+  let text: string = "This contest does not have a description.";
   try {
-    await access(`./contests/${contest}.md`, fs.constants.F_OK); 
-    text = await readFile(`./contests/${contest}.md`, { encoding: 'utf8' });
-  } catch (err) {
-    console.log(err);
-    text = 'This contest does not have a description.';
-  }
-  return { 
-    name: config.name || contest.split('/').slice(-1),
+    text = await readFile(`./contests/${contest}.md`, { encoding: "utf8" });
+  } catch (err) {}
+
+  const def_config: Contest = {
+    id: contest,
+    name: getPathLeaf(contest),
     text: text,
-    opens: config.starts || null,
-    closes: config.ends || null
+    starts: null,
+    ends: null,
+    challenges: [],
   };
-}
 
-export async function getContests() {
-  const result = [];
-  for (const path of await explore('./contests')) {
-    if (path.split('/').find(sub => sub.includes('hidden')) !== undefined) continue;
-    const config = await getContestConfig(path.slice('./contests/'.length, -('.json'.length)));
-    result.push({
-      name: config.name || path.split('/').slice(-1)[0].slice(0, -('.json'.length)),
-      id: path.slice('./contests/'.length, -('.json'.length)),
-      starts: config.starts ? parseTime(config.starts): -Infinity,
-      ends: config.ends ? parseTime(config.ends) : Infinity
-    });
-  };
-  result.sort((a, b) => b.ends - a.ends || b.starts - a.starts || a.name.localeCompare(b.name));
-  return result;
-}
-
-export function contestChallengesHaveScore(contest_config: any) {
-  return (typeof contest_config.challenges[0] !== 'string');
-}
-
-export async function getContestChallenges(contest: string): Promise<string[]> {
-  const contest_config = await getContestConfig(contest);
-  if (contestChallengesHaveScore(contest_config)) return contest_config.challenges.map(p => p.name);
-  return contest_config.challenges;
-}
-
-export async function getContestChallengesServer(uId: number, contest: string) {
-  const contest_config = await getContestConfig(contest);
-  let result = [];
-  const hasScore = contestChallengesHaveScore(contest_config);
-  for (const challenge of contest_config.challenges) {
-    const name = (await getChallengeConfig(hasScore ? challenge.name : challenge)).name;
-    result.push({
-      name: name,
-      score: hasScore ? challenge.score : 100,
-      submissions: (await getChallengeResults(uId, contest, hasScore ? challenge.name : challenge, false)).submissions.length,
-      id: hasScore ? challenge.name : challenge
-    });
-  }
-  return result;
-}
-
-export async function getContestConfig(contest: string) {
-  await checkContestExists(contest);
-
-  contest = './contests/' + contest + '.json';
-  let contest_config;
+  let result = structuredClone(def_config);
   try {
-    contest_config = JSON.parse(await readFile(contest, { encoding: 'utf8' }));
+    const config = JSON.parse(
+      await readFile(`./contests/${contest}.json`, { encoding: "utf8" })
+    );
+    config.challenges = config.challenges.map((x: any) =>
+      typeof x === "string" ? { id: x, max_score: 100 } : x
+    );
+    insertKeys(config, result);
   } catch (err) {
-    throw createError(500, 'Challenge error.');
+    throw createError(500, "Error parsing contest.");
   }
 
-  return contest_config;
-}
+  if (result.starts)
+    result.starts = parseTime(result.starts as unknown as string);
+  if (result.ends) result.ends = parseTime(result.ends as unknown as string);
 
-export async function contestIsOpen(contest: string) {
-  const config = await getContestConfig(contest);
-  if (config.starts && parseTime(config.starts) > Date.now()) return false;
-  if (config.ends && parseTime(config.ends) < Date.now()) return false;
-  return true;
-}
-
-export const DbJoinQueue = [];
-
-export async function joinContest(uId: number, contest: string) {
-  await new Promise((resolve, reject) => {
-    DbJoinQueue.push(async () => {
-      try {
-        if ((await userContests(uId)).includes(contest)) {
-          DbJoinQueue.splice(0, 1);
-          if (DbJoinQueue.length > 0) {
-            DbJoinQueue[0]();
-          }
-
-          return reject(createError(400, 'User already in contest.'));
-        }
-        await DbPromise(db, 'run', `
-          INSERT INTO Participants
-          VALUES (?, ?)
-        `, [uId, contest]);
-
-        DbJoinQueue.splice(0, 1);
-        if (DbJoinQueue.length > 0) {
-          DbJoinQueue[0]();
-        }
-        resolve(true);
-      } catch (err) {
-        if (err instanceof HttpError) throw err;
-        throw createError(500, `Join error: ${err.message}`);
-      }
-    });
-    if (DbJoinQueue.length === 1) {
-      DbJoinQueue[0]();
-    }
-  });
+  return result;
 }
 
 export async function checkContestExists(contest: string) {
-  contest = './contests/' + contest + '.json';
+  contest = "./contests/" + contest + ".json";
 
   try {
     await access(contest, fs.constants.F_OK);
     return true;
   } catch {
-    throw createError('404', 'Contest not found.');
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Contest not found.",
+    });
   }
 }
 
-export async function checkContestAuth(uId: number, contest: string) {
-  if ((await userContests(uId)).includes(contest)) {
-    return;
+export async function checkContestAuth(
+  uId: number,
+  contest: string
+): Promise<ContestValidation> {
+  const userContests = await prisma.participant.findMany({
+    select: { contest: true, time: true },
+    where: { user_id: uId },
+  });
+  const result = userContests.find((x) => x.contest === contest);
+  if (result !== undefined) {
+    return {
+      joined: true,
+      joinTime: result.time,
+    };
   }
-  throw createError(403, 'Cannot access this contest.');
+  return {
+    joined: false,
+    joinTime: null,
+  };
 }
 
-export async function userActiveContests(uId: number) {
-  const rows = (await DbPromise(db, 'all', `
-    SELECT DISTINCT p.contest
-    FROM Participants p
-    WHERE p.user = ?
-  `, [uId]) as { contest: string }[]);
-  
-  const result = [];
-  for (const { contest } of rows) {
-    if (await contestIsOpen(contest)) result.push(contest);
-  }
-
-  return result;
+export async function contestIsOpen(contest: string) {
+  const config = await getContestInternal(contest);
+  if (config.starts && config.starts > Date.now()) return false;
+  if (config.ends && config.ends < Date.now()) return false;
+  return true;
 }
 
-export async function userContests(uId: number) {
-  const result =  (await DbPromise(db, 'all', `
-    SELECT DISTINCT p.contest
-    FROM Participants p
-    WHERE p.user = ?
-  `, [uId]) as { contest: string }[]).map(x => x.contest);
-  return result;
-}
-
-export async function getChallengeScoreInContest(contest: string, challenge: string) {
-  const contest_config = await getContestConfig(contest);
-  return (contestChallengesHaveScore(contest_config) ? contest_config.challenges.find(x => x.name === challenge).score : 100);
+export async function checkContestIsOpen(contest: string) {
+  if (await contestIsOpen(contest)) return;
+  throw createError(400, "Contest is not open.");
 }

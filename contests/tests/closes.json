@@ -1,7 +1,7 @@
 {
-  "name": "Test Contest",
+  "name": "Closing Contest",
   "starts": "00:00 01/01/2022",
-  "ends": "01:10 10/10/2023",
+  "ends": "15:00 19/07/2023",
   "challenges": [
     {
       "id": "tests/simple_io",

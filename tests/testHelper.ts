@@ -134,10 +134,9 @@ export async function testGetChallengeResults(userToken: string, contest: string
   });
   const body = await res.json();
   expect(res.ok).toStrictEqual(expectSuccess !== ExpectState.FAILURE);
-  if (expectSuccess === ExpectState.SUCCESS_NO_CHECK) return body['submissions'];
+  if (expectSuccess === ExpectState.SUCCESS_NO_CHECK) return body;
 
-  if (expectSuccess === ExpectState.SUCCESS) expect(body).toStrictEqual({ submissions: expect.any(Object) });
-  else expect(body).toStrictEqual({ error: expect.any(String) });
+  if (expectSuccess === ExpectState.FAILURE) expect(body).toStrictEqual({ error: expect.any(String) });
   return body;
 }
 

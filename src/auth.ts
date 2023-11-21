@@ -1,124 +1,144 @@
-import crypto from 'crypto';
-import createError, { HttpError } from 'http-errors';
-import { db } from './server';
-import { DbPromise } from './helper';
-import { Session } from './types';
-import { v4 } from 'uuid';
-import { Request } from 'express';
+import crypto from "crypto";
+import createError, { HttpError } from "http-errors";
+import { AuthValidation, Session } from "./interface";
+import { v4 } from "uuid";
+import { prisma } from "./server";
+import { Request } from "express";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { publicProcedure, router } from "./trpc";
+import { TRPCError } from "@trpc/server";
+import { z } from "zod";
+import { Context } from "./context";
 
 const PASS_SALT = "__HACKERN'T__";
-
-export const DbUserQueue = [];
 export const tokens: Map<String, Session> = new Map<String, Session>();
 
 function hash(plain: string): string {
-  return crypto.createHash('sha256').update(plain + PASS_SALT).digest('hex');
+  return crypto
+    .createHash("sha256")
+    .update(plain + PASS_SALT)
+    .digest("hex");
 }
 
-export async function register(username: string, password: string) {
-  try {
-    await new Promise((resolve, reject) => {
-      DbUserQueue.push(async () => {
-        try {
-          const row = await DbPromise(db, 'get', `
-            SELECT count(id) AS count
-            FROM Users
-            WHERE username = ?
-          `, [username]);
+export const authRouter = router({
+  register: publicProcedure
+    .input(z.object({ username: z.string(), password: z.string().min(6) }))
+    .mutation(async ({ input }) => {
+      console.log(input);
+      try {
+        await prisma.user.create({
+          data: { username: input.username, password: hash(input.password) },
+        });
 
-          if (row['count'] !== 0) return reject(createError(400, 'Username in use.'));
-
-          const new_id = ((await DbPromise(db, 'get', 'SELECT max(id) as max FROM Users', [])) as { max: number }).max as number + 1;
-
-          await DbPromise(db, 'run', 'INSERT INTO Users VALUES (?, ?, ?)', [new_id, username, hash(password)]);
-
-          DbUserQueue.splice(0, 1);
-          if (DbUserQueue.length > 0) {
-            DbUserQueue[0]();
-          }
-          resolve(true);
-        } catch (err) {
-          if (err instanceof HttpError) reject(err);
-          reject(createError(500, `Registration error: ${err.message}`));
+        return true;
+      } catch (err) {
+        console.log(err);
+        if (err instanceof PrismaClientKnownRequestError) {
+          if (err.code === "P2002")
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: "Username in use.",
+            });
         }
-      });
-      if (DbUserQueue.length === 1) {
-        DbUserQueue[0]();
+        throw err;
       }
-    });
-  } catch (err) {
-    throw err;
-  }
-}
+    }),
 
-export async function login(username: string, password: string) {
-  try {
-    const row = await DbPromise(db, 'get', `
-      SELECT count(id) AS count
-      FROM Users
-      WHERE username = ?
-    `, [username]);
+  login: publicProcedure
+    .input(z.object({ username: z.string(), password: z.string() }))
+    .mutation(async ({ input }) => {
+      console.log(input);
+      try {
+        const result = await prisma.user.findUniqueOrThrow({
+          where: {
+            username: input.username,
+          },
+        });
 
-    if (row['count'] === 0) throw createError(400, 'No such user.');
+        if (result.password === hash(input.password)) {
+          let newToken = v4();
+          let newSession: Session = {
+            uId: result.id,
+            timeout: Date.now() + 1000 * 60 * 60 * 12,
+          };
+          tokens.set(newToken, newSession);
+          return newToken;
+        } else {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Incorrect password or user not found.",
+          });
+        }
+      } catch (e) {
+        if (e instanceof PrismaClientKnownRequestError) {
+          if (e.code == "P2025")
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "Incorrect password or user not found.",
+            });
+        }
+        throw createError(
+          500,
+          `Unhandled login error: ${(e as Error).message}`
+        );
+      }
+    }),
 
-    const row_passid = await DbPromise(db, 'get', `
-      SELECT password, id
-      FROM Users
-      WHERE username = ?
-    `, [username]);
+  logout: publicProcedure.mutation(({ ctx }) => {
+    return tokens.delete(ctx.token || "");
+  }),
 
-    const passHash = row_passid['password'];
-    const uId = row_passid['id'];
+  validate: publicProcedure.query(async ({ ctx }): Promise<AuthValidation> => {
+    const token = ctx.token;
+    if (!token) return { isLoggedIn: false, username: null };
 
-    if (passHash === hash(password)) {
-      let newToken = v4();
-      let newSession: Session = {
-        uId: uId,
-        timeout: Date.now() + 1000 * 60 * 60 * 12
-      };
-      tokens.set(newToken, newSession);
-      return newToken;
-    } else {
-      throw createError(403, 'Incorrect password.');
+    const session = tokens.get(token);
+    if (session === undefined || session.timeout < Date.now()) {
+      return { isLoggedIn: false, username: null };
     }
-  } catch(err) {
-    if (err instanceof HttpError) throw err;
-    else throw createError(500, `Login error: ${err.message}`);
+
+    return { isLoggedIn: true, username: await getUsername(session.uId) };
+  }),
+});
+
+export const protectedProcedure = publicProcedure.use(({ next, ctx }) => {
+  const { token, uId } = ctx;
+
+  if (token === undefined || uId === undefined) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Invalid or expired token.",
+    });
   }
-}
 
-export function logout(token: string) {
-  tokens.delete(token);
-}
+  return next({
+    ctx: {
+      token: token,
+      uId: uId,
+    },
+  });
+});
 
-export async function getUser(req: Request) {
-  const token = req.header('token');
-  const session = tokens.get(token);
-  
-  if (token === undefined || session === undefined || session.timeout < Date.now()) {
-    throw createError(403, 'Invalid or expired token.');
+export async function getUser(req: Request): Promise<number> {
+  const token = req.header("token");
+  const session = tokens.get(token || "");
+  if (
+    token === undefined ||
+    session === undefined ||
+    session.timeout < Date.now()
+  ) {
+    throw createError(403, "Invalid or expired token.");
   }
 
   return session.uId;
 }
 
-export async function getUsername(req: Request) {
-  const uId = await getUser(req);
-  const row = await DbPromise(db, 'get', `
-    SELECT u.username
-    FROM Users u
-    WHERE u.id = ?
-  `, [uId]);
-  return row['username'];
+export async function getUsername(uId: number) {
+  return (
+    await prisma.user.findUniqueOrThrow({
+      where: {
+        id: uId,
+      },
+    })
+  ).username;
 }
-
-export const auth = (req: Request, res, next) => {
-  const token = req.header('token');
-  const session = tokens.get(token);
-  
-  if (token === undefined || session === undefined || session.timeout < Date.now()) {
-    return res.status(403).json({ error: 'Invalid or expired token.' });
-  }
-
-  next();
-};
