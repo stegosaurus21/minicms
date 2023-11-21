@@ -1,4 +1,3 @@
-import fileUpload, { UploadedFile } from "express-fileupload";
 import { access, readFile } from "fs/promises";
 import createError, { HttpError } from "http-errors";
 import fs from "fs";

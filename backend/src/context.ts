@@ -1,4 +1,3 @@
-import { type inferAsyncReturnType } from "@trpc/server";
 import type { CreateNextContextOptions } from "@trpc/server/adapters/next";
 import { getUser } from "./auth";
 import { Request } from "express";

@@ -3,7 +3,7 @@ import {
   checkContestExists,
   getContestInternal,
 } from "./contest";
-import createError, { HttpError } from "http-errors";
+import createError from "http-errors";
 import { access, readdir, readFile } from "fs/promises";
 import fs from "fs";
 import def_config from "../config.json";
@@ -15,7 +15,7 @@ import {
   ContestChallenge,
 } from "./interface";
 import { getPathLeaf, insertKeys } from "./helper";
-import { publicProcedure, router } from "./trpc";
+import { router } from "./trpc";
 import { z } from "zod";
 import { protectedProcedure } from "./auth";
 import { TRPCError } from "@trpc/server";

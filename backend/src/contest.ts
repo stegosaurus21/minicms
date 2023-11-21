@@ -1,15 +1,12 @@
 import { access, readdir, readFile } from "fs/promises";
-import { getTime, parse } from "date-fns";
 import fs from "fs";
-import createError, { HttpError } from "http-errors";
+import createError from "http-errors";
 import { getPathLeaf, insertKeys, parseTime } from "./helper";
 import { getChallengeResults, getChallengeInternal } from "./challenge";
 import {
   ChallengeResult,
   Contest,
-  ContestChallenge,
   ContestChallengeExternal,
-  ContestExternal,
   ContestMeta,
   ContestValidation,
 } from "./interface";

@@ -1,4 +1,4 @@
-import { readdir, rm } from "fs/promises";
+import { rm } from "fs/promises";
 import { tokens } from "./auth";
 import { awaitResult, awaitScoring, awaitTest } from "./results";
 import { prisma } from "./server";

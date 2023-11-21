@@ -8,7 +8,6 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { publicProcedure, router } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { Context } from "./context";
 
 const PASS_SALT = "__HACKERN'T__";
 export const tokens: Map<String, Session> = new Map<String, Session>();

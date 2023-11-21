@@ -1,13 +1,10 @@
-import { parseTime } from "./helper";
 import createError, { HttpError } from "http-errors";
 import { prisma } from "./server";
 import {
-  ChallengeResult,
   ContestChallenge,
   LeaderboardEntry,
   Resolve,
   ResolveCounter,
-  Result,
 } from "./interface";
 import { getContestInternal } from "./contest";
 import { getChallengeInternal } from "./challenge";
