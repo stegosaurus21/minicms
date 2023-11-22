@@ -1,13 +1,8 @@
-import { format, formatDistanceToNowStrict } from "date-fns";
-import React, { useEffect, useState } from "react";
-import { Button, Container, Table } from "react-bootstrap";
+import { useEffect, useState } from "react";
+import { Container, Table } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import { TokenProp } from "src/App";
-import { prettyDate, prettyInterval } from "src/utils/helper";
 import { ContestMeta } from "src/interface";
-import { config } from "../config";
 import style from "../styles.module.css";
-import { Api } from "src/Api";
 import TimeDisplay from "src/components/TimeDisplay";
 import { trpc } from "src/utils/trpc";
 import ErrorPage from "src/components/Error";

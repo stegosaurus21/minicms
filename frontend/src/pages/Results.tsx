@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import { useEffect, useState } from "react";
 import {
   Accordion,
   Badge,
@@ -10,7 +10,6 @@ import {
   Table,
 } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
-import { TokenProp } from "src/App";
 import {
   parseMemory,
   prettyDate,
@@ -18,11 +17,10 @@ import {
   styleScore,
   styleStatus,
 } from "src/utils/helper";
-import { config } from "../config";
 import style from "../styles.module.css";
 import { Buffer } from "buffer";
 import { Api } from "src/Api";
-import { ChallengeExternal, Result, Submission } from "src/interface";
+import { Result, Submission } from "src/interface";
 import ErrorPage from "src/components/Error";
 import { trpc } from "src/utils/trpc";
 
@@ -50,7 +48,7 @@ const Results = () => {
         setViewable(false);
         throw new Error("Cannot view submission.");
       })
-      .then(() => {
+      .then((res) => {
         setResults(
           Array.from({ length: res.tasks }, () => ({
             token: "",

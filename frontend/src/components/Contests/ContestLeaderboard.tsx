@@ -1,12 +1,6 @@
-import { format, isLeapYear } from "date-fns";
-import React, { useEffect, useState } from "react";
-import { Button, Container, Table } from "react-bootstrap";
+import { Table } from "react-bootstrap";
 import { round2dp, styleScore } from "src/utils/helper";
-import {
-  ContestChallengeExternal,
-  LeaderboardEntry,
-  RenderableLeaderboard,
-} from "src/interface";
+import { ContestChallengeExternal, RenderableLeaderboard } from "src/interface";
 
 const ContestLeaderboard = (props: {
   showUnofficial: boolean;

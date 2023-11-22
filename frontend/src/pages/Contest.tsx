@@ -1,22 +1,14 @@
-import { format } from "date-fns";
-import React, { useEffect, useState, useContext } from "react";
+import { useEffect, useState } from "react";
 import { Button, Container, Tab, Table, Tabs } from "react-bootstrap";
 import FormCheckInput from "react-bootstrap/esm/FormCheckInput";
 import { useNavigate, useParams } from "react-router-dom";
-import { TokenProp } from "src/App";
-import { round2dp, styleScore } from "src/utils/helper";
-import { config } from "../config";
 import style from "../styles.module.css";
-import {
-  ContestExternal,
-  Leaderboard,
-  LeaderboardEntry,
-  RenderableLeaderboard,
-} from "src/interface";
+import { Leaderboard, RenderableLeaderboard } from "src/interface";
 import ContestLeaderboard from "src/components/Contests/ContestLeaderboard";
 import { Api } from "src/Api";
 import ErrorPage from "src/components/Error";
 import { trpc } from "src/utils/trpc";
+import { round2dp, styleScore } from "src/utils/helper";
 
 const ContestPage = () => {
   const navigate = useNavigate();

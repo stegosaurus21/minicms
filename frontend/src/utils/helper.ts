@@ -1,7 +1,4 @@
 import { Duration, format, formatDuration, intervalToDuration } from "date-fns";
-import { config } from "../config";
-import { Api } from "../Api";
-import { trpc } from "./trpc";
 
 export function contestOpen(starts: number | null, ends: number | null) {
   if (starts && Date.now() < starts) return false;

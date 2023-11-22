@@ -2,12 +2,9 @@ import { config } from "./config";
 import {
   ChallengeExternal,
   ChallengeResult,
-  ContestExternal,
-  ContestMeta,
   EmptyObject,
   Language,
   Leaderboard,
-  LeaderboardEntry,
   Result,
 } from "./interface";
 

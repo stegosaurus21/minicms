@@ -1,7 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Button, Container } from 'react-bootstrap';
-import { config } from '../config';
-import style from '../styles.module.css';
+import React, { useState } from "react";
+import { Container } from "react-bootstrap";
 
 const Home: React.FC<{}> = () => {
   const [times, setTimes] = useState(0);
@@ -12,7 +10,7 @@ const Home: React.FC<{}> = () => {
         <p>Welcome to MiniCMS!</p>
       </Container>
     </>
-  )
+  );
 };
 
 export default Home;

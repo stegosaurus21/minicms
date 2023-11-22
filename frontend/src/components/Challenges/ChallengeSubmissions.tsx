@@ -1,12 +1,6 @@
-import { format, isLeapYear } from "date-fns";
-import React, { useEffect, useState } from "react";
-import { Badge, Button, Container, Table } from "react-bootstrap";
+import { Badge, Table } from "react-bootstrap";
 import { prettyDate, round2dp, styleScore } from "src/utils/helper";
-import {
-  ContestChallengeExternal,
-  LeaderboardEntry,
-  Submission,
-} from "src/interface";
+import { Submission } from "src/interface";
 import style from "../../styles.module.css";
 import { useNavigate } from "react-router-dom";
 
