@@ -13,6 +13,13 @@ import fetch from "node-fetch";
 import { PrismaClient } from "@prisma/client";
 import { appRouter } from "./app";
 import { JudgeLanguage } from "./interface";
+import env from "dotenv";
+
+env.config();
+const BACKEND_URL = process.env.BACKEND_URL || "localhost";
+const BACKEND_PORT = process.env.BACKEND_PORT || "8080";
+const JUDGE_URL = process.env.BACKEND_URL || "localhost";
+const JUDGE_PORT = process.env.BACKEND_PORT || "2358";
 
 export const prisma = new PrismaClient();
 
@@ -73,26 +80,20 @@ app.put(
 
 app.use(errorHandler);
 
-const server = app.listen(
-  parseInt(config.BACKEND_PORT),
-  config.BACKEND_URL,
-  async () => {
-    const languagesReq = await fetch(
-      `http://${config.JUDGE_URL}:${config.JUDGE_PORT}/languages`,
-      {
-        method: "GET",
-      }
-    );
-    judgeLanguages = ((await languagesReq.json()) as JudgeLanguage[]).filter(
-      (x) => !config.disabled_languages.includes(x.id)
-    );
-    console.log(
-      `server started on port ${parseInt(config.BACKEND_PORT)} at ${
-        config.BACKEND_URL
-      }`
-    );
-  }
-);
+const server = app.listen(parseInt(BACKEND_PORT), BACKEND_URL, async () => {
+  const languagesReq = await fetch(
+    `http://${JUDGE_URL}:${JUDGE_PORT}/languages`,
+    {
+      method: "GET",
+    }
+  );
+  judgeLanguages = ((await languagesReq.json()) as JudgeLanguage[]).filter(
+    (x) => !config.disabled_languages.includes(x.id)
+  );
+  console.log(
+    `server started on port ${parseInt(BACKEND_PORT)} at ${BACKEND_URL}`
+  );
+});
 
 process.on("SIGINT", () => {
   server.close(async () => {
