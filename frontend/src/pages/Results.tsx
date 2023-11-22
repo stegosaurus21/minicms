@@ -11,6 +11,7 @@ import {
 } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import {
+  error,
   parseMemory,
   prettyDate,
   round2dp,
@@ -21,7 +22,6 @@ import style from "../styles.module.css";
 import { Buffer } from "buffer";
 import { Api } from "src/Api";
 import { Result, Submission } from "src/interface";
-import ErrorPage from "src/components/Error";
 import { trpc } from "src/utils/trpc";
 
 const Results = () => {
@@ -105,14 +105,10 @@ const Results = () => {
     populate();
   }, [user.status]);
   if (user.isLoading) return <></>;
-  if (user.isError)
-    return <ErrorPage message="A server authentication error occurred." />;
+  if (user.isError) throw error("ERR_AUTH");
 
   if (challenge.isLoading) return <></>;
-  if (challenge.isError)
-    return (
-      <ErrorPage message="A server error occurred when fetching the challenge." />
-    );
+  if (challenge.isError) throw error("ERR_CHAL_FETCH");
 
   const scoring = challenge === null ? null : challenge.data.scoring;
 

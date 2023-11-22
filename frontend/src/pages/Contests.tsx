@@ -5,25 +5,20 @@ import { ContestMeta } from "src/interface";
 import style from "../styles.module.css";
 import TimeDisplay from "src/components/TimeDisplay";
 import { trpc } from "src/utils/trpc";
-import ErrorPage from "src/components/Error";
+import { error } from "src/utils/helper";
 
 const Contests = () => {
-  // const [contests, setContests] = useState<ContestMeta[]>([]);
   const [now, setNow] = useState(Date.now());
   const navigate = useNavigate();
 
   useEffect(() => {
-    /* Api.getContestList().then((res) => {
-      setContests(res.contests);
-    }); */
     const ticker = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(ticker);
   }, []);
 
   const contests = trpc.contest.list.useQuery();
   if (contests.isLoading) return <></>;
-  if (contests.isError)
-    return <ErrorPage message="A server error occurred."></ErrorPage>;
+  if (contests.isError) throw error("ERR_CONTEST_LIST_FETCH");
 
   return (
     <>

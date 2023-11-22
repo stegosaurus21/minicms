@@ -1,14 +1,11 @@
-import React, { useState, useEffect, useContext } from "react";
+import { useState } from "react";
 import { Form, Button, Container } from "react-bootstrap";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { TokenSetterProp } from "src/App";
 
 import styles from "../styles.module.css";
 import { Api } from "src/Api";
 import { trpc } from "src/utils/trpc";
-import ErrorPage from "src/components/Error";
-import { useQueryClient } from "@tanstack/react-query";
-import { getQueryKey } from "@trpc/react-query";
+import { error } from "src/utils/helper";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -22,8 +19,7 @@ const Login = () => {
   const utils = trpc.useContext();
   const user = trpc.auth.validate.useQuery();
   if (user.isLoading) return <></>;
-  if (user.isError)
-    return <ErrorPage message="A server authentication error occurred." />;
+  if (user.isError) throw error("ERR_AUTH");
 
   if (user.data.isLoggedIn) {
     navigate("/");

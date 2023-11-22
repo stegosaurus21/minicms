@@ -6,9 +6,8 @@ import style from "../styles.module.css";
 import { Leaderboard, RenderableLeaderboard } from "src/interface";
 import ContestLeaderboard from "src/components/Contests/ContestLeaderboard";
 import { Api } from "src/Api";
-import ErrorPage from "src/components/Error";
 import { trpc } from "src/utils/trpc";
-import { round2dp, styleScore } from "src/utils/helper";
+import { error, round2dp, styleScore } from "src/utils/helper";
 
 const ContestPage = () => {
   const navigate = useNavigate();
@@ -35,7 +34,9 @@ const ContestPage = () => {
     sortedLeaderboard.sort((a, b) => a.total - b.total);
   }
 
-  const queryContestName = (params["contest"] || "").replace(":", "/");
+  if (!params["contest"]) throw error("ERR_CONTEST_MISSING");
+
+  const queryContestName = params["contest"].replace(":", "/");
 
   const utils = trpc.useContext();
   const joinContest = trpc.contest.join.useMutation();
@@ -58,24 +59,17 @@ const ContestPage = () => {
     });
   }, [user.status]);
 
-  if (!params["contest"])
-    return <ErrorPage message="No contest given."></ErrorPage>;
   const contestName = params["contest"].replace(":", "/");
 
   if (validation.isLoading) return <></>;
-  if (validation.isError)
-    return <ErrorPage message="A contest authentication error occurred." />;
+  if (validation.isError) throw error("ERR_CONTEST_404");
 
   if (contest.isLoading) return <></>;
-  if (contest.isError)
-    return <ErrorPage message="Contest not found."></ErrorPage>;
+  if (contest.isError) throw error("ERR_CONTEST_FETCH");
 
   if (user.isLoading) return <></>;
-  if (user.isError)
-    return <ErrorPage message="A server authentication error occurred." />;
+  if (user.isError) throw error("ERR_AUTH");
 
-  if (!params["contest"])
-    return <ErrorPage message="No contest given."></ErrorPage>;
   return (
     <>
       <Container>

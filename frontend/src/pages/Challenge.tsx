@@ -5,7 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import { round2dp, styleScore } from "src/utils/helper";
+import { error, round2dp, styleScore } from "src/utils/helper";
 import style from "../styles.module.css";
 import "katex/dist/katex.min.css";
 import FormCheckInput from "react-bootstrap/esm/FormCheckInput";
@@ -13,7 +13,6 @@ import { Api } from "src/Api";
 import { Language, Submission } from "src/interface";
 import ChallengeSubmissions from "src/components/Challenges/ChallengeSubmissions";
 import { trpc } from "src/utils/trpc";
-import ErrorPage from "src/components/Error";
 
 const Challenge = () => {
   const navigate = useNavigate();
@@ -28,8 +27,11 @@ const Challenge = () => {
   const [score, setScore] = useState<number>(0);
   const [showUnofficial, setShowUnofficial] = useState<boolean>();
 
-  const queryContestName = (params["contest"] || "").replace(":", "/");
-  const queryChallengeName = (params["challenge"] || "").replace(":", "/");
+  if (!params["contest"]) throw error("ERR_CONTEST_MISSING");
+  if (!params["challenge"]) throw error("ERR_CHAL_MISSING");
+
+  const queryContestName = params["contest"].replace(":", "/");
+  const queryChallengeName = params["challenge"].replace(":", "/");
 
   const submit = trpc.challenge.submit.useMutation();
   const submitForm = async (event: any) => {
@@ -82,19 +84,22 @@ const Challenge = () => {
     { contest: queryContestName, challenge: queryChallengeName },
     { enabled: validation.isSuccess && validation.data.isViewable }
   );
+  const results = trpc.challenge.getResults.useQuery(
+    { contest: queryContestName, challenge: queryChallengeName },
+    { enabled: validation.isSuccess && validation.data.isViewable }
+  );
 
   if (user.isLoading) return <></>;
-  if (user.isError)
-    return <ErrorPage message="A server authentication error occurred." />;
+  if (user.isError) throw error("ERR_AUTH");
 
   if (validation.isLoading) return <></>;
-  if (validation.isError) return <ErrorPage message="Challenge not found." />;
+  if (validation.isError) throw error("ERR_CHAL_404");
 
   if (challenge.isLoading) return <></>;
-  if (challenge.isError)
-    return (
-      <ErrorPage message="A server occurred when fetching the challenge." />
-    );
+  if (challenge.isError) throw error("ERR_CHAL_FETCH");
+
+  if (results.isLoading) return <></>;
+  if (results.isError) throw error("ERR_RESULTS_FETCH");
 
   if (!user.data.isLoggedIn) {
     return (

@@ -1,4 +1,5 @@
 import { Duration, format, formatDuration, intervalToDuration } from "date-fns";
+import { errorMessages } from "src/components/Error";
 
 export function contestOpen(starts: number | null, ends: number | null) {
   if (starts && Date.now() < starts) return false;
@@ -60,4 +61,10 @@ export function styleStatus(status: string | undefined, pre?: string) {
     return `${pre || ""}body text-body`;
   if (status === "Accepted") return `${pre || ""}success text-light`;
   return `${pre || ""}danger text-light`;
+}
+
+class KnownError extends Error {}
+
+export function error(messageId: keyof typeof errorMessages) {
+  return new KnownError(messageId);
 }

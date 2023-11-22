@@ -5,7 +5,7 @@ import styles from "../styles.module.css";
 import { config } from "../config";
 import { trpc } from "src/utils/trpc";
 import { useQueryClient } from "@tanstack/react-query";
-import ErrorPage from "src/components/Error";
+import { error } from "src/utils/helper";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -35,8 +35,7 @@ const Register = () => {
   const queryClient = useQueryClient();
   const user = trpc.auth.validate.useQuery();
   if (user.isLoading) return <></>;
-  if (user.isError)
-    return <ErrorPage message="A server authentication error occurred." />;
+  if (user.isError) throw error("ERR_AUTH");
 
   if (user.data.isLoggedIn) {
     navigate("/");
