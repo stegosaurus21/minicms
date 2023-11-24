@@ -13,6 +13,8 @@ export const errorMessages = {
   "ERR_CONTEST_LIST_FETCH":
     "A server error occurred when fetching the contest list.",
   "ERR_RESULTS_FETCH": "A server error occurred when fetching contest results.",
+  "ERR_LANG_FETCH":
+    "A server error occurred when fetching submission languages.",
 };
 
 const ErrorPage = (props: { messageId: keyof typeof errorMessages }) => {

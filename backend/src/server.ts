@@ -24,7 +24,7 @@ const JUDGE_PORT = process.env.BACKEND_PORT || "2358";
 export const prisma = new PrismaClient();
 
 const app = express();
-let judgeLanguages: JudgeLanguage[];
+export let judgeLanguages: JudgeLanguage[];
 let lastClear = Date.now();
 
 app.use(json());
@@ -45,14 +45,6 @@ app.delete("/clear", async (req, res) => {
   lastClear = Date.now();
   await clear();
   return res.json();
-});
-
-app.get("/languages", async (req, res, next) => {
-  try {
-    return res.json(judgeLanguages);
-  } catch (err) {
-    next(err);
-  }
 });
 
 app.get("/results/leaderboard", async (req, res, next) => {

@@ -56,7 +56,7 @@ export interface RenderableLeaderboard {
 export interface Submission {
   time: number;
   token: string;
-  score: number;
+  score: number | null;
   index: number;
   official: boolean;
 }

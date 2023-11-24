@@ -11,7 +11,7 @@ const ChallengeSubmissions = (props: {
 }) => {
   const { showUnofficial, max_score } = props;
   const submissions = props.submissions
-    .filter((x) => showUnofficial || x.official)
+    .filter((x) => x.score != null && (showUnofficial || x.official))
     .sort((a, b) => a.index - b.index);
 
   const navigate = useNavigate();

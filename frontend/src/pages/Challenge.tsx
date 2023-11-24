@@ -17,14 +17,9 @@ import { trpc } from "src/utils/trpc";
 const Challenge = () => {
   const navigate = useNavigate();
   const params = useParams();
-  const [languages, setLanguages] = useState<Language[]>([]);
   const [file, setFile] = useState<File>();
   const [submissionLanguage, setSubmissionLanguage] = useState<string>("");
   const [validated, setValidated] = useState(false);
-  const [pastSubmissions, setPastSubmissions] = useState<Submission[] | null>(
-    null
-  );
-  const [score, setScore] = useState<number>(0);
   const [showUnofficial, setShowUnofficial] = useState<boolean>();
 
   if (!params["contest"]) throw error("ERR_CONTEST_MISSING");
@@ -50,32 +45,8 @@ const Challenge = () => {
     setValidated(true);
   };
 
-  const populate = () => {
-    Api.getChallengeResults(params["contest"], params["challenge"])
-      .then((res) => {
-        setScore(
-          res.submissions.reduce(
-            (prev: number, next: Submission) =>
-              prev > next.score ? prev : next.score,
-            0
-          )
-        );
-        setPastSubmissions(res.submissions);
-      })
-      .catch((err) => console.log(err));
-
-    Api.getLanguages()
-      .then((res) => {
-        setLanguages(res);
-      })
-      .catch((err) => console.log(err));
-  };
-
   const user = trpc.auth.validate.useQuery();
-  useEffect(() => {
-    if (user.status !== "success") return;
-    populate();
-  }, [user.status]);
+  const languages = trpc.languages.useQuery();
   const validation = trpc.challenge.validate.useQuery(
     { contest: queryContestName, challenge: queryChallengeName },
     { enabled: queryContestName !== "" && queryChallengeName !== "" }
@@ -101,6 +72,9 @@ const Challenge = () => {
   if (results.isLoading) return <></>;
   if (results.isError) throw error("ERR_RESULTS_FETCH");
 
+  if (languages.isLoading) return <></>;
+  if (languages.isError) throw error("ERR_LANG_FETCH");
+
   if (!user.data.isLoggedIn) {
     return (
       <Container>
@@ -118,6 +92,9 @@ const Challenge = () => {
       </Container>
     );
   }
+
+  const pastSubmissions = results.data.submissions;
+  const score = results.data.score;
 
   return (
     <>
@@ -155,7 +132,7 @@ const Challenge = () => {
                   }
                 >
                   <option value="">Select your submission language</option>
-                  {languages.map((x) => (
+                  {languages.data.map((x) => (
                     <option value={x.id}>{x.name}</option>
                   ))}
                 </Form.Select>

@@ -60,6 +60,7 @@ const Login = () => {
                     params.get("url") ? `/contests/${params.get("url")}` : "/"
                   );
                 })
+                .catch((e) => {})
             }
           >
             Submit
