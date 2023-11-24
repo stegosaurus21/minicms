@@ -2,7 +2,14 @@ import { access, readFile } from "fs/promises";
 import createError, { HttpError } from "http-errors";
 import fs from "fs";
 import { v4 } from "uuid";
-import { judgeSecret, prisma } from "./server";
+import {
+  BACKEND_PORT,
+  BACKEND_URL,
+  JUDGE_PORT,
+  JUDGE_URL,
+  judgeSecret,
+  prisma,
+} from "./server";
 import config from "../config.json";
 import fetch from "node-fetch";
 import { awaitScoring, processResult } from "./results";
@@ -89,7 +96,7 @@ export async function submit(
     const outputs = IOs.slice(tests.length, IOs.length);
     const responses = await Promise.all(
       inputs.map((input, i) =>
-        fetch(`http://${config.JUDGE_URL}:${config.JUDGE_PORT}/submissions`, {
+        fetch(`http://${JUDGE_URL}:${JUDGE_PORT}/submissions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -104,12 +111,8 @@ export async function submit(
               ? challenge_config.memory_limit || config.memory_limit
               : config.memory_limit,
             callback_url: `http://${
-              config.BACKEND_URL === "0.0.0.0"
-                ? "host.docker.internal"
-                : config.BACKEND_URL
-            }:${
-              config.BACKEND_PORT
-            }/callback/${judgeSecret}/${submission}/${i}/${Date.now()}`,
+              BACKEND_URL === "0.0.0.0" ? "host.docker.internal" : BACKEND_URL
+            }:${BACKEND_PORT}/callback/${judgeSecret}/${submission}/${i}/${Date.now()}`,
           }),
         })
       )
