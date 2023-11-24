@@ -6,7 +6,7 @@ import style from "../styles.module.css";
 import { RenderableLeaderboard } from "src/interface";
 import ContestLeaderboard from "src/components/Contests/ContestLeaderboard";
 import { trpc } from "src/utils/trpc";
-import { round2dp, styleScore } from "src/utils/helper";
+import { assertQuerySuccess, round2dp, styleScore } from "src/utils/helper";
 import { error } from "src/components/Error";
 
 const ContestPage = () => {
@@ -33,23 +33,16 @@ const ContestPage = () => {
 
   const contestName = params["contest"].replace(":", "/");
 
-  if (validation.isLoading) return <></>;
-  if (validation.isError) throw error("ERR_CONTEST_404");
+  assertQuerySuccess(validation, "ERR_CONTEST_404");
+  assertQuerySuccess(contest, "ERR_CONTEST_FETCH");
+  assertQuerySuccess(user, "ERR_AUTH");
+  assertQuerySuccess(leaderboard, "ERR_LEADERBOARD_FETCH");
 
-  if (contest.isLoading) return <></>;
-  if (contest.isError) throw error("ERR_CONTEST_FETCH");
-
-  if (user.isLoading) return <></>;
-  if (user.isError) throw error("ERR_AUTH");
-
-  if (leaderboard.isLoading) return <></>;
-  if (leaderboard.isError) throw error("ERR_LEADERBOARD_FETCH");
-
-  let baseLeaderboard = showUnofficial
+  const baseLeaderboard = showUnofficial
     ? leaderboard.data.all
     : leaderboard.data.official;
 
-  let sortedLeaderboard: RenderableLeaderboard[] = Object.keys(
+  const sortedLeaderboard: RenderableLeaderboard[] = Object.keys(
     baseLeaderboard
   ).map((key) => ({
     name: key,

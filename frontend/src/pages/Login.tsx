@@ -6,6 +6,7 @@ import styles from "../styles.module.css";
 import { Api } from "src/Api";
 import { trpc } from "src/utils/trpc";
 import { error } from "src/components/Error";
+import { assertQuerySuccess } from "src/utils/helper";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -18,8 +19,7 @@ const Login = () => {
 
   const utils = trpc.useContext();
   const user = trpc.auth.validate.useQuery();
-  if (user.isLoading) return <></>;
-  if (user.isError) throw error("ERR_AUTH");
+  assertQuerySuccess(user, "ERR_AUTH");
 
   if (user.data.isLoggedIn) {
     navigate("/");

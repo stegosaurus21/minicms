@@ -6,6 +6,7 @@ import style from "../styles.module.css";
 import TimeDisplay from "src/components/TimeDisplay";
 import { trpc } from "src/utils/trpc";
 import { error } from "src/components/Error";
+import { assertQuerySuccess } from "src/utils/helper";
 
 const Contests = () => {
   const [now, setNow] = useState(Date.now());
@@ -17,8 +18,7 @@ const Contests = () => {
   }, []);
 
   const contests = trpc.contest.list.useQuery();
-  if (contests.isLoading) return <></>;
-  if (contests.isError) throw error("ERR_CONTEST_LIST_FETCH");
+  assertQuerySuccess(contests, "ERR_CONTEST_LIST_FETCH");
 
   return (
     <>

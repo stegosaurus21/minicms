@@ -23,6 +23,7 @@ import { config } from "./config";
 import superjson from "superjson";
 import { trpc } from "./utils/trpc";
 import ErrorPage, { KnownError, errorMessages } from "./components/Error";
+import { LoadingMarker } from "./utils/helper";
 
 export interface TokenProp {
   token: string | null;
@@ -49,46 +50,44 @@ export const App: React.FC<{}> = () => {
       transformer: superjson,
     })
   );
+
+  let content = <></>;
   try {
-    return (
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
-          <Router>
-            <Header />
-            <Container>
-              <Breadcrumb></Breadcrumb>
-            </Container>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/contests" element={<Contests />} />
-              <Route path="/contests/:contest" element={<ContestPage />} />
-              <Route
-                path="/contests/:contest/:challenge"
-                element={<Challenge />}
-              />
-              <Route
-                path="/contests/:contest/:challenge/:submission"
-                element={<Results />}
-              />
-              <Route path="/auth/login" element={<Login />} />
-              <Route path="/auth/register" element={<Register />} />
-            </Routes>
-          </Router>
-        </QueryClientProvider>
-      </trpc.Provider>
+    content = (
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/contests" element={<Contests />} />
+        <Route path="/contests/:contest" element={<ContestPage />} />
+        <Route path="/contests/:contest/:challenge" element={<Challenge />} />
+        <Route
+          path="/contests/:contest/:challenge/:submission"
+          element={<Results />}
+        />
+        <Route path="/auth/login" element={<Login />} />
+        <Route path="/auth/register" element={<Register />} />
+      </Routes>
     );
   } catch (e) {
-    if (e instanceof KnownError) {
-      return (
-        <>
+    if (e instanceof LoadingMarker) {
+      content = <></>;
+    } else if (e instanceof KnownError) {
+      content = <ErrorPage messageId={e.message} />;
+    } else {
+      throw e;
+    }
+  }
+
+  return (
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <Router>
           <Header />
           <Container>
             <Breadcrumb></Breadcrumb>
           </Container>
-          <ErrorPage messageId={e.message} />
-        </>
-      );
-    }
-    throw e;
-  }
+          {content}
+        </Router>
+      </QueryClientProvider>
+    </trpc.Provider>
+  );
 };

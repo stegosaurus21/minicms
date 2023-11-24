@@ -1,5 +1,9 @@
+import {
+  UseTRPCQueryResult,
+  UseTRPCQuerySuccessResult,
+} from "@trpc/react-query/dist/shared";
 import { Duration, format, formatDuration, intervalToDuration } from "date-fns";
-import { errorMessages } from "src/components/Error";
+import { error, errorMessages } from "src/components/Error";
 
 export function contestOpen(starts: number | null, ends: number | null) {
   if (starts && Date.now() < starts) return false;
@@ -61,4 +65,14 @@ export function styleStatus(status: string | undefined, pre?: string) {
     return `${pre || ""}body text-body`;
   if (status === "Accepted") return `${pre || ""}success text-light`;
   return `${pre || ""}danger text-light`;
+}
+
+export class LoadingMarker {}
+
+export function assertQuerySuccess<a, b>(
+  query: UseTRPCQueryResult<a, b>,
+  errorCode: keyof typeof errorMessages
+): asserts query is UseTRPCQuerySuccessResult<a, b> {
+  if (query.isLoading) throw new LoadingMarker();
+  if (query.isError) throw error(errorCode);
 }

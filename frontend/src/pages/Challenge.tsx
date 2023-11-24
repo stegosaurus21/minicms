@@ -5,7 +5,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import { round2dp, styleScore } from "src/utils/helper";
+import { assertQuerySuccess, round2dp, styleScore } from "src/utils/helper";
 import style from "../styles.module.css";
 import "katex/dist/katex.min.css";
 import FormCheckInput from "react-bootstrap/esm/FormCheckInput";
@@ -59,20 +59,11 @@ const Challenge = () => {
     { enabled: validation.isSuccess && validation.data.isViewable }
   );
 
-  if (user.isLoading) return <></>;
-  if (user.isError) throw error("ERR_AUTH");
-
-  if (validation.isLoading) return <></>;
-  if (validation.isError) throw error("ERR_CHAL_404");
-
-  if (challenge.isLoading) return <></>;
-  if (challenge.isError) throw error("ERR_CHAL_FETCH");
-
-  if (results.isLoading) return <></>;
-  if (results.isError) throw error("ERR_RESULTS_FETCH");
-
-  if (languages.isLoading) return <></>;
-  if (languages.isError) throw error("ERR_LANG_FETCH");
+  assertQuerySuccess(user, "ERR_AUTH");
+  assertQuerySuccess(validation, "ERR_CHAL_404");
+  assertQuerySuccess(challenge, "ERR_CHAL_FETCH");
+  assertQuerySuccess(results, "ERR_RESULTS_FETCH");
+  assertQuerySuccess(languages, "ERR_LANG_FETCH");
 
   if (!user.data.isLoggedIn) {
     return (
