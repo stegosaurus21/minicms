@@ -5,7 +5,7 @@ import { ContestMeta } from "src/interface";
 import style from "../styles.module.css";
 import TimeDisplay from "src/components/TimeDisplay";
 import { trpc } from "src/utils/trpc";
-import { error } from "src/utils/helper";
+import { error } from "src/components/Error";
 
 const Contests = () => {
   const [now, setNow] = useState(Date.now());

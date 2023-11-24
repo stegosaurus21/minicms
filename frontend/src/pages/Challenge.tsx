@@ -1,18 +1,17 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button, Container, Table, Form, Badge } from "react-bootstrap";
 import { ReactMarkdown } from "react-markdown/lib/react-markdown";
 import { useNavigate, useParams } from "react-router-dom";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import { error, round2dp, styleScore } from "src/utils/helper";
+import { round2dp, styleScore } from "src/utils/helper";
 import style from "../styles.module.css";
 import "katex/dist/katex.min.css";
 import FormCheckInput from "react-bootstrap/esm/FormCheckInput";
-import { Api } from "src/Api";
-import { Language, Submission } from "src/interface";
 import ChallengeSubmissions from "src/components/Challenges/ChallengeSubmissions";
 import { trpc } from "src/utils/trpc";
+import { error } from "src/components/Error";
 
 const Challenge = () => {
   const navigate = useNavigate();

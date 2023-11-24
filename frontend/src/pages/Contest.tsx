@@ -1,38 +1,19 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button, Container, Tab, Table, Tabs } from "react-bootstrap";
 import FormCheckInput from "react-bootstrap/esm/FormCheckInput";
 import { useNavigate, useParams } from "react-router-dom";
 import style from "../styles.module.css";
-import { Leaderboard, RenderableLeaderboard } from "src/interface";
+import { RenderableLeaderboard } from "src/interface";
 import ContestLeaderboard from "src/components/Contests/ContestLeaderboard";
-import { Api } from "src/Api";
 import { trpc } from "src/utils/trpc";
-import { error, round2dp, styleScore } from "src/utils/helper";
+import { round2dp, styleScore } from "src/utils/helper";
+import { error } from "src/components/Error";
 
 const ContestPage = () => {
   const navigate = useNavigate();
   const params = useParams();
 
-  const [leaderboard, setLeaderboard] = useState<Leaderboard | null>(null);
   const [showUnofficial, setShowUnofficial] = useState<boolean>(false);
-  const [complete, setComplete] = useState<boolean>(false);
-
-  let sortedLeaderboard: RenderableLeaderboard[] | undefined = undefined;
-  if (leaderboard) {
-    console.log(leaderboard);
-    let baseLeaderboard = showUnofficial
-      ? leaderboard.all
-      : leaderboard.official;
-
-    sortedLeaderboard = Object.keys(baseLeaderboard).map((key) => ({
-      name: key,
-      results: baseLeaderboard[key].results,
-      place: undefined,
-      total: baseLeaderboard[key].results.reduce((p, n) => p + n.score, 0),
-    }));
-
-    sortedLeaderboard.sort((a, b) => a.total - b.total);
-  }
 
   if (!params["contest"]) throw error("ERR_CONTEST_MISSING");
 
@@ -41,23 +22,14 @@ const ContestPage = () => {
   const utils = trpc.useContext();
   const joinContest = trpc.contest.join.useMutation();
 
+  const leaderboard = trpc.results.getLeaderboard.useQuery({
+    contest: queryContestName,
+  });
   const user = trpc.auth.validate.useQuery();
-  const validation = trpc.contest.validate.useQuery(
-    { contest: queryContestName },
-    { enabled: queryContestName !== "" }
-  );
-  const contest = trpc.contest.get.useQuery(
-    { contest: queryContestName },
-    { enabled: queryContestName !== "" }
-  );
-
-  useEffect(() => {
-    if (user.status !== "success") return;
-    Api.getLeaderboard(params["contest"], !showUnofficial).then((res) => {
-      setLeaderboard(res.leaderboard);
-      setComplete(true);
-    });
-  }, [user.status]);
+  const validation = trpc.contest.validate.useQuery({
+    contest: queryContestName,
+  });
+  const contest = trpc.contest.get.useQuery({ contest: queryContestName });
 
   const contestName = params["contest"].replace(":", "/");
 
@@ -69,6 +41,24 @@ const ContestPage = () => {
 
   if (user.isLoading) return <></>;
   if (user.isError) throw error("ERR_AUTH");
+
+  if (leaderboard.isLoading) return <></>;
+  if (leaderboard.isError) throw error("ERR_LEADERBOARD_FETCH");
+
+  let baseLeaderboard = showUnofficial
+    ? leaderboard.data.all
+    : leaderboard.data.official;
+
+  let sortedLeaderboard: RenderableLeaderboard[] = Object.keys(
+    baseLeaderboard
+  ).map((key) => ({
+    name: key,
+    results: baseLeaderboard[key].results,
+    place: undefined,
+    total: baseLeaderboard[key].results.reduce((p, n) => p + n.score, 0),
+  }));
+
+  sortedLeaderboard.sort((a, b) => a.total - b.total);
 
   return (
     <>
@@ -155,61 +145,59 @@ const ContestPage = () => {
               </Tab>
             )}
             <Tab eventKey="leaderboard" title="Leaderboard">
-              {complete && sortedLeaderboard !== undefined && (
-                <Container className="pt-3">
-                  <FormCheckInput
-                    checked={showUnofficial}
-                    onChange={(event) => {
-                      setShowUnofficial(event.target.checked);
-                    }}
-                  />
-                  <span> Include unofficial submissions</span>
-                  <div className="mb-2"></div>
-                  {user.data.isLoggedIn &&
-                    validation.data.joined &&
-                    (sortedLeaderboard.findIndex(
-                      (x) => x.name === user.data.username
-                    ) !== -1 ? (
-                      <p>
-                        Your {showUnofficial ? "un" : ""}
-                        official position is{" "}
-                        {`${
-                          sortedLeaderboard.findIndex(
-                            (x) => x.name === user.data.username
-                          ) + 1
-                        }${
-                          ["st", "nd", "rd", "th"][
-                            Math.min(
-                              4,
-                              sortedLeaderboard.findIndex(
-                                (x) => x.name === user.data.username
-                              ) % 10
-                            )
-                          ]
-                        }`}{" "}
-                        out of {sortedLeaderboard.length} participant
-                        {sortedLeaderboard.length > 1 ? "s" : ""}.
-                      </p>
-                    ) : (
-                      <p>
-                        You{" "}
-                        {contest.data.ends === null ||
-                        Date.now() < contest.data.ends ||
-                        showUnofficial
-                          ? "are"
-                          : "were"}{" "}
-                        not a{showUnofficial ? "" : "n official"} participant in
-                        this contest.
-                      </p>
-                    ))}
-                  <ContestLeaderboard
-                    showUnofficial={showUnofficial}
-                    username={user.data.username}
-                    leaderboard={sortedLeaderboard}
-                    challenges={contest.data.challenges}
-                  />
-                </Container>
-              )}
+              <Container className="pt-3">
+                <FormCheckInput
+                  checked={showUnofficial}
+                  onChange={(event) => {
+                    setShowUnofficial(event.target.checked);
+                  }}
+                />
+                <span> Include unofficial submissions</span>
+                <div className="mb-2"></div>
+                {user.data.isLoggedIn &&
+                  validation.data.joined &&
+                  (sortedLeaderboard.findIndex(
+                    (x) => x.name === user.data.username
+                  ) !== -1 ? (
+                    <p>
+                      Your {showUnofficial ? "un" : ""}
+                      official position is{" "}
+                      {`${
+                        sortedLeaderboard.findIndex(
+                          (x) => x.name === user.data.username
+                        ) + 1
+                      }${
+                        ["st", "nd", "rd", "th"][
+                          Math.min(
+                            4,
+                            sortedLeaderboard.findIndex(
+                              (x) => x.name === user.data.username
+                            ) % 10
+                          )
+                        ]
+                      }`}{" "}
+                      out of {sortedLeaderboard.length} participant
+                      {sortedLeaderboard.length > 1 ? "s" : ""}.
+                    </p>
+                  ) : (
+                    <p>
+                      You{" "}
+                      {contest.data.ends === null ||
+                      Date.now() < contest.data.ends ||
+                      showUnofficial
+                        ? "are"
+                        : "were"}{" "}
+                      not a{showUnofficial ? "" : "n official"} participant in
+                      this contest.
+                    </p>
+                  ))}
+                <ContestLeaderboard
+                  showUnofficial={showUnofficial}
+                  username={user.data.username}
+                  leaderboard={sortedLeaderboard}
+                  challenges={contest.data.challenges}
+                />
+              </Container>
             </Tab>
           </Tabs>
         )}

@@ -62,9 +62,3 @@ export function styleStatus(status: string | undefined, pre?: string) {
   if (status === "Accepted") return `${pre || ""}success text-light`;
   return `${pre || ""}danger text-light`;
 }
-
-class KnownError extends Error {}
-
-export function error(messageId: keyof typeof errorMessages) {
-  return new KnownError(messageId);
-}

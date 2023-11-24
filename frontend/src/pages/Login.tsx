@@ -5,7 +5,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import styles from "../styles.module.css";
 import { Api } from "src/Api";
 import { trpc } from "src/utils/trpc";
-import { error } from "src/utils/helper";
+import { error } from "src/components/Error";
 
 const Login = () => {
   const navigate = useNavigate();

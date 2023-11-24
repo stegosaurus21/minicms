@@ -5,7 +5,7 @@ import styles from "../styles.module.css";
 import { config } from "../config";
 import { trpc } from "src/utils/trpc";
 import { useQueryClient } from "@tanstack/react-query";
-import { error } from "src/utils/helper";
+import { error } from "src/components/Error";
 
 const Register = () => {
   const navigate = useNavigate();

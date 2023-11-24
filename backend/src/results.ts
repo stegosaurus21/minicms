@@ -378,10 +378,8 @@ export async function getLeaderboard(contest: string) {
   }
 
   return {
-    leaderboard: {
-      all: all,
-      official: official,
-    },
+    all: all,
+    official: official,
   };
 }
 

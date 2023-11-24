@@ -15,9 +15,11 @@ export const errorMessages = {
   "ERR_RESULTS_FETCH": "A server error occurred when fetching contest results.",
   "ERR_LANG_FETCH":
     "A server error occurred when fetching submission languages.",
+  "ERR_LEADERBOARD_FETCH":
+    "A server error occurred when fetching the contest leaderboard.",
 };
 
-const ErrorPage = (props: { messageId: keyof typeof errorMessages }) => {
+const ErrorPage = (props: { messageId: string }) => {
   const navigate = useNavigate();
   return (
     <Container>
@@ -26,9 +28,18 @@ const ErrorPage = (props: { messageId: keyof typeof errorMessages }) => {
       </span>
       <h1>Error</h1>
       <p>Code: {props.messageId}</p>
-      <p>{errorMessages[props.messageId] || "An unknown error occurred."}</p>
+      <p>
+        {errorMessages[props.messageId as keyof typeof errorMessages] ||
+          "An unknown error occurred."}
+      </p>
     </Container>
   );
 };
+
+export class KnownError extends Error {}
+
+export function error(messageId: keyof typeof errorMessages) {
+  return new KnownError(messageId);
+}
 
 export default ErrorPage;

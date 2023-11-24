@@ -11,7 +11,6 @@ import {
 } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  error,
   parseMemory,
   prettyDate,
   round2dp,
@@ -23,6 +22,7 @@ import { Buffer } from "buffer";
 import { Api } from "src/Api";
 import { Result, Submission } from "src/interface";
 import { trpc } from "src/utils/trpc";
+import { error } from "src/components/Error";
 
 const Results = () => {
   const navigate = useNavigate();
