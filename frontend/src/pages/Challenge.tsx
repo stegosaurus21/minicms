@@ -11,7 +11,7 @@ import "katex/dist/katex.min.css";
 import FormCheckInput from "react-bootstrap/esm/FormCheckInput";
 import ChallengeSubmissions from "src/components/Challenges/ChallengeSubmissions";
 import { trpc } from "src/utils/trpc";
-import { error } from "src/components/Error";
+import { error, handleError } from "src/components/Error";
 
 const Challenge = () => {
   const navigate = useNavigate();
@@ -59,11 +59,15 @@ const Challenge = () => {
     { enabled: validation.isSuccess && validation.data.isViewable }
   );
 
-  assertQuerySuccess(user, "ERR_AUTH");
-  assertQuerySuccess(validation, "ERR_CHAL_404");
-  assertQuerySuccess(challenge, "ERR_CHAL_FETCH");
-  assertQuerySuccess(results, "ERR_RESULTS_FETCH");
-  assertQuerySuccess(languages, "ERR_LANG_FETCH");
+  try {
+    assertQuerySuccess(user, "ERR_AUTH");
+    assertQuerySuccess(validation, "ERR_CHAL_404");
+    assertQuerySuccess(challenge, "ERR_CHAL_FETCH");
+    assertQuerySuccess(results, "ERR_RESULTS_FETCH");
+    assertQuerySuccess(languages, "ERR_LANG_FETCH");
+  } catch (e) {
+    return handleError(e);
+  }
 
   if (!user.data.isLoggedIn) {
     return (

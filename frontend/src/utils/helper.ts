@@ -67,12 +67,26 @@ export function styleStatus(status: string | undefined, pre?: string) {
   return `${pre || ""}danger text-light`;
 }
 
-export class LoadingMarker {}
+export class LoadingMarker extends Error {}
 
 export function assertQuerySuccess<a, b>(
   query: UseTRPCQueryResult<a, b>,
-  errorCode: keyof typeof errorMessages
+  errorCode?: keyof typeof errorMessages
 ): asserts query is UseTRPCQuerySuccessResult<a, b> {
   if (query.isLoading) throw new LoadingMarker();
-  if (query.isError) throw error(errorCode);
+  if (query.isError)
+    throw errorCode
+      ? error(errorCode)
+      : new Error("Query success assertion failed.");
+}
+
+export function assertAllQueriesSuccess<a, b>(
+  queries: UseTRPCQueryResult<a, b>[],
+  errorCode?: keyof typeof errorMessages
+): asserts queries is UseTRPCQuerySuccessResult<a, b>[] {
+  if (queries.find((x) => x.isError) !== undefined)
+    throw errorCode
+      ? error(errorCode)
+      : new Error("Query success assertion failed.");
+  if (queries.find((x) => x.isFetching)) throw new LoadingMarker();
 }

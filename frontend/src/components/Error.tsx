@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import Container from "react-bootstrap/Container";
 import style from "../styles.module.css";
+import { LoadingMarker } from "src/utils/helper";
 
 export const errorMessages = {
   "ERR_AUTH": "A server authentication error occurred.",
@@ -17,6 +18,11 @@ export const errorMessages = {
     "A server error occurred when fetching submission languages.",
   "ERR_LEADERBOARD_FETCH":
     "A server error occurred when fetching the contest leaderboard.",
+  "ERR_SUBMISSION_MISSING": "No submission was provided.",
+  "ERR_SUBMISSION_404": "The submission was not found.",
+  "ERR_SUBMISSION_FETCH":
+    "A server error occurred when fetching the submission.",
+  "ERR_GENERAL": "An error occurred.",
 };
 
 const ErrorPage = (props: { messageId: string }) => {
@@ -35,6 +41,16 @@ const ErrorPage = (props: { messageId: string }) => {
     </Container>
   );
 };
+
+export function handleError(e: any) {
+  if (e instanceof LoadingMarker) {
+    return <></>;
+  } else if (e instanceof KnownError) {
+    return <ErrorPage messageId={e.message} />;
+  } else {
+    throw e;
+  }
+}
 
 export class KnownError extends Error {}
 

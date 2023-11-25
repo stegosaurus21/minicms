@@ -7,7 +7,7 @@ import { RenderableLeaderboard } from "src/interface";
 import ContestLeaderboard from "src/components/Contests/ContestLeaderboard";
 import { trpc } from "src/utils/trpc";
 import { assertQuerySuccess, round2dp, styleScore } from "src/utils/helper";
-import { error } from "src/components/Error";
+import { error, handleError } from "src/components/Error";
 
 const ContestPage = () => {
   const navigate = useNavigate();
@@ -32,11 +32,14 @@ const ContestPage = () => {
   const contest = trpc.contest.get.useQuery({ contest: queryContestName });
 
   const contestName = params["contest"].replace(":", "/");
-
-  assertQuerySuccess(validation, "ERR_CONTEST_404");
-  assertQuerySuccess(contest, "ERR_CONTEST_FETCH");
-  assertQuerySuccess(user, "ERR_AUTH");
-  assertQuerySuccess(leaderboard, "ERR_LEADERBOARD_FETCH");
+  try {
+    assertQuerySuccess(validation, "ERR_CONTEST_404");
+    assertQuerySuccess(contest, "ERR_CONTEST_FETCH");
+    assertQuerySuccess(user, "ERR_AUTH");
+    assertQuerySuccess(leaderboard, "ERR_LEADERBOARD_FETCH");
+  } catch (e) {
+    return handleError(e);
+  }
 
   const baseLeaderboard = showUnofficial
     ? leaderboard.data.all

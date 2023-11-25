@@ -5,7 +5,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import styles from "../styles.module.css";
 import { Api } from "src/Api";
 import { trpc } from "src/utils/trpc";
-import { error } from "src/components/Error";
+import { error, handleError } from "src/components/Error";
 import { assertQuerySuccess } from "src/utils/helper";
 
 const Login = () => {
@@ -19,7 +19,12 @@ const Login = () => {
 
   const utils = trpc.useContext();
   const user = trpc.auth.validate.useQuery();
-  assertQuerySuccess(user, "ERR_AUTH");
+
+  try {
+    assertQuerySuccess(user, "ERR_AUTH");
+  } catch (e) {
+    return handleError(e);
+  }
 
   if (user.data.isLoggedIn) {
     navigate("/");

@@ -117,7 +117,7 @@ export class Api {
       challenge: challenge,
     });
   }
-
+  /*
   public static async resultsValidate(
     contest: string | undefined,
     challenge: string | undefined,
@@ -135,6 +135,7 @@ export class Api {
       submission: submission,
     });
   }
+  */
 
   public static async getChallengeResults(
     contest: string | undefined,

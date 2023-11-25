@@ -17,7 +17,7 @@ import Results from "./pages/Results";
 import { Breadcrumb, Container } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import style from "./styles.module.css";
-import { httpBatchLink } from "@trpc/client";
+import { httpBatchLink, httpLink, splitLink } from "@trpc/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { config } from "./config";
 import superjson from "superjson";
@@ -33,49 +33,44 @@ export interface TokenSetterProp {
   token: [string | null, React.Dispatch<React.SetStateAction<string | null>>];
 }
 
+const url = `http://${config.BACKEND_URL}:${config.BACKEND_PORT}/trpc`;
+
 export const App: React.FC<{}> = () => {
   const [queryClient] = useState(() => new QueryClient());
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [
-        httpBatchLink({
-          url: `http://${config.BACKEND_URL}:${config.BACKEND_PORT}/trpc`,
-          async headers() {
-            return {
-              token: localStorage.getItem("token") || "",
-            };
+        splitLink({
+          condition(op) {
+            // check for context property `skipBatch`
+            // don't batch test case fetching
+            return (
+              op.context.skipBatch === true || op.path === "results.getTest"
+            );
           },
+          // when condition is true, use normal request
+          true: httpLink({
+            url,
+            async headers() {
+              return {
+                token: localStorage.getItem("token") || "",
+              };
+            },
+          }),
+          // when condition is false, use batching
+          false: httpBatchLink({
+            url,
+            async headers() {
+              return {
+                token: localStorage.getItem("token") || "",
+              };
+            },
+          }),
         }),
       ],
       transformer: superjson,
     })
   );
-
-  let content = <></>;
-  try {
-    content = (
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/contests" element={<Contests />} />
-        <Route path="/contests/:contest" element={<ContestPage />} />
-        <Route path="/contests/:contest/:challenge" element={<Challenge />} />
-        <Route
-          path="/contests/:contest/:challenge/:submission"
-          element={<Results />}
-        />
-        <Route path="/auth/login" element={<Login />} />
-        <Route path="/auth/register" element={<Register />} />
-      </Routes>
-    );
-  } catch (e) {
-    if (e instanceof LoadingMarker) {
-      content = <></>;
-    } else if (e instanceof KnownError) {
-      content = <ErrorPage messageId={e.message} />;
-    } else {
-      throw e;
-    }
-  }
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
@@ -85,7 +80,21 @@ export const App: React.FC<{}> = () => {
           <Container>
             <Breadcrumb></Breadcrumb>
           </Container>
-          {content}
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/contests" element={<Contests />} />
+            <Route path="/contests/:contest" element={<ContestPage />} />
+            <Route
+              path="/contests/:contest/:challenge"
+              element={<Challenge />}
+            />
+            <Route
+              path="/contests/:contest/:challenge/:submission"
+              element={<Results />}
+            />
+            <Route path="/auth/login" element={<Login />} />
+            <Route path="/auth/register" element={<Register />} />
+          </Routes>
         </Router>
       </QueryClientProvider>
     </trpc.Provider>

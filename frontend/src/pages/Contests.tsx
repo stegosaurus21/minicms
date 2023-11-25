@@ -5,7 +5,7 @@ import { ContestMeta } from "src/interface";
 import style from "../styles.module.css";
 import TimeDisplay from "src/components/TimeDisplay";
 import { trpc } from "src/utils/trpc";
-import { error } from "src/components/Error";
+import { error, handleError } from "src/components/Error";
 import { assertQuerySuccess } from "src/utils/helper";
 
 const Contests = () => {
@@ -18,7 +18,12 @@ const Contests = () => {
   }, []);
 
   const contests = trpc.contest.list.useQuery();
-  assertQuerySuccess(contests, "ERR_CONTEST_LIST_FETCH");
+
+  try {
+    assertQuerySuccess(contests, "ERR_CONTEST_LIST_FETCH");
+  } catch (e) {
+    return handleError(e);
+  }
 
   return (
     <>

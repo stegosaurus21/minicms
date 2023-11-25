@@ -5,7 +5,7 @@ import styles from "../styles.module.css";
 import { config } from "../config";
 import { trpc } from "src/utils/trpc";
 import { useQueryClient } from "@tanstack/react-query";
-import { error } from "src/components/Error";
+import { error, handleError } from "src/components/Error";
 import { assertQuerySuccess } from "src/utils/helper";
 
 const Register = () => {
@@ -35,7 +35,12 @@ const Register = () => {
 
   const queryClient = useQueryClient();
   const user = trpc.auth.validate.useQuery();
-  assertQuerySuccess(user, "ERR_AUTH");
+
+  try {
+    assertQuerySuccess(user, "ERR_AUTH");
+  } catch (e) {
+    return handleError(e);
+  }
 
   if (user.data.isLoggedIn) {
     navigate("/");
