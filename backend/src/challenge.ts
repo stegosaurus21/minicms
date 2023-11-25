@@ -219,7 +219,7 @@ export async function getChallengeResults(
       time: x.time.getTime(),
       token: x.token,
       score: x.score,
-      index: results.length - i,
+      index: i,
       official: contest_config.ends
         ? x.time.getTime() <= contest_config.ends
         : true,

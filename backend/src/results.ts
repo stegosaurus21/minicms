@@ -7,7 +7,7 @@ import {
   ResolveCounter,
 } from "./interface";
 import { getContestInternal } from "./contest";
-import { getChallengeInternal } from "./challenge";
+import { getChallengeInternal, getChallengeResults } from "./challenge";
 import { readFile } from "fs/promises";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { publicProcedure, router } from "./trpc";
@@ -41,7 +41,7 @@ const protectedResultsProcedure = publicResultsProcedure.use(
 export const resultsRouter = router({
   getScore: protectedResultsProcedure.query(async ({ input }) => {
     const { submission } = input;
-    return await getResult(submission);
+    return (await getResult(submission)).score;
   }),
 
   getTest: protectedResultsProcedure
@@ -51,10 +51,26 @@ export const resultsRouter = router({
       return await getTest(submission, test);
     }),
 
-  getSource: protectedResultsProcedure.query(async ({ input }) => {
-    const { submission } = input;
-    return await getSource(submission);
-  }),
+  getSubmission: protectedResultsProcedure
+    .input(z.object({ challenge: z.string(), contest: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const { contest, challenge, submission } = input;
+      const { uId } = ctx;
+      const thisSubmission = (
+        await getChallengeResults(contest, challenge, uId)
+      ).submissions.find((x) => x.token === submission);
+      if (thisSubmission === undefined) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Submission not found in challenge.",
+        });
+      }
+      return {
+        source: (await getSource(submission)).src,
+        index: thisSubmission.index,
+        time: thisSubmission.time,
+      };
+    }),
 
   getLeaderboard: publicProcedure
     .input(z.object({ contest: z.string() }))
@@ -407,6 +423,17 @@ export async function checkSubmissionAuth(uId: number, submission: string) {
 }
 
 export async function getSource(submission: string) {
-  const src = await readFile(`./upload/${submission}`, { encoding: "utf8" });
-  return { src: src };
+  try {
+    return await prisma.submission.findUniqueOrThrow({
+      select: { src: true },
+      where: { token: submission },
+    });
+  } catch (err) {
+    if (err instanceof PrismaClientKnownRequestError) {
+      if (err.code === "P2025") {
+        throw createError(400, "Submission not found.");
+      } else throw err;
+    } else if (err instanceof HttpError) throw err;
+    else throw err;
+  }
 }

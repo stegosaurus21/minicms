@@ -18,8 +18,8 @@ import env from "dotenv";
 env.config();
 export const BACKEND_URL = process.env.BACKEND_URL || "localhost";
 export const BACKEND_PORT = process.env.BACKEND_PORT || "8080";
-export const JUDGE_URL = process.env.BACKEND_URL || "localhost";
-export const JUDGE_PORT = process.env.BACKEND_PORT || "2358";
+export const JUDGE_URL = process.env.JUDGE_URL || "localhost";
+export const JUDGE_PORT = process.env.JUDGE_PORT || "2358";
 
 export const prisma = new PrismaClient();
 
