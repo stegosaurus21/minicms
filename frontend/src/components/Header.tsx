@@ -3,7 +3,6 @@ import Container from "react-bootstrap/Container";
 import Nav from "react-bootstrap/Nav";
 import Navbar from "react-bootstrap/Navbar";
 import style from "../styles.module.css";
-import { Api } from "src/Api";
 import { trpc } from "src/utils/trpc";
 
 const Header = () => {
@@ -39,7 +38,6 @@ const Header = () => {
                 : logout.mutateAsync().then(() => {
                     utils.auth.invalidate();
                     localStorage.removeItem("token");
-                    Api.refreshToken();
                     navigate("/");
                   })
             }

@@ -3,7 +3,6 @@ import { Form, Button, Container } from "react-bootstrap";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import styles from "../styles.module.css";
-import { Api } from "src/Api";
 import { trpc } from "src/utils/trpc";
 import { error, handleError } from "src/components/Error";
 import { assertQuerySuccess } from "src/utils/helper";
@@ -59,7 +58,6 @@ const Login = () => {
                 .mutateAsync({ username: username, password: password })
                 .then((token) => {
                   localStorage.setItem("token", token);
-                  Api.refreshToken();
                   utils.auth.invalidate();
                   navigate(
                     params.get("url") ? `/contests/${params.get("url")}` : "/"

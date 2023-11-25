@@ -1,11 +1,5 @@
-import React, { useEffect, useState, createContext } from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-  useParams,
-} from "react-router-dom";
+import React, { useState } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
 import Home from "./pages/Home";
 import Contests from "./pages/Contests";
@@ -22,8 +16,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { config } from "./config";
 import superjson from "superjson";
 import { trpc } from "./utils/trpc";
-import ErrorPage, { KnownError, errorMessages } from "./components/Error";
-import { LoadingMarker } from "./utils/helper";
 
 export interface TokenProp {
   token: string | null;

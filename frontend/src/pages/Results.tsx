@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
   Accordion,
   Badge,
@@ -22,8 +21,6 @@ import {
 } from "src/utils/helper";
 import style from "../styles.module.css";
 import { Buffer } from "buffer";
-import { Api } from "src/Api";
-import { Result, Submission } from "src/interface";
 import { trpc } from "src/utils/trpc";
 import { error, handleError } from "src/components/Error";
 
