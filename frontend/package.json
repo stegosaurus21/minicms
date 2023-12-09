@@ -26,6 +26,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "build-docker": "BUILD_PATH='../backend/public' react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },

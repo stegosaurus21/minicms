@@ -33,6 +33,8 @@ app.use(morgan("dev"));
 app.use(fileUpload({ createParentPath: true }));
 app.use(cookie_parser());
 
+app.use(express.static("public"));
+
 app.use(
   "/trpc",
   trpcExpress.createExpressMiddleware({
@@ -45,15 +47,6 @@ app.delete("/clear", async (req, res) => {
   lastClear = Date.now();
   await clear();
   return res.json();
-});
-
-app.get("/results/leaderboard", async (req, res, next) => {
-  try {
-    const contest = req.query.contest as string;
-    return res.json(await getLeaderboard(contest));
-  } catch (err) {
-    next(err);
-  }
 });
 
 export const judgeSecret = v4();
@@ -78,7 +71,12 @@ const server = app.listen(parseInt(BACKEND_PORT), BACKEND_URL, async () => {
     {
       method: "GET",
     }
-  );
+  ).catch(() => {
+    console.log(
+      `error: could not reach judging server at http://${JUDGE_URL}:${JUDGE_PORT}`
+    );
+    process.exit(1);
+  });
   judgeLanguages = ((await languagesReq.json()) as JudgeLanguage[]).filter(
     (x) => !config.disabled_languages.includes(x.id)
   );
