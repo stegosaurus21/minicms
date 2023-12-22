@@ -10,13 +10,14 @@ COPY ./backend/.docker.env ./backend/.env
 COPY ./frontend ./frontend
 
 WORKDIR /minicms/backend
-RUN npm install
-RUN mkdir ./static
+RUN npm ci
+RUN npx prisma generate
+RUN npx prisma migrate deploy
 
-WORKDIR minicms/frontend
-RUN npm install
-RUN npm run build-docker
+WORKDIR /minicms/frontend
+RUN npm ci
+RUN npm run-script build-docker
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
 
-EXPOSE 3000
+EXPOSE 8080
