@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import Container from "react-bootstrap/Container";
 import style from "../styles.module.css";
-import { LoadingMarker } from "src/utils/helper";
+import { LoadingMarker } from "utils/helper";
 
 export const errorMessages = {
   "ERR_AUTH": "A server authentication error occurred.",

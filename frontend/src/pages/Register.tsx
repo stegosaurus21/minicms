@@ -3,10 +3,10 @@ import { Form, Button, Container } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import styles from "../styles.module.css";
 import { config } from "../config";
-import { trpc } from "src/utils/trpc";
+import { trpc } from "utils/trpc";
 import { useQueryClient } from "@tanstack/react-query";
-import { error, handleError } from "src/components/Error";
-import { assertQuerySuccess } from "src/utils/helper";
+import { error, handleError } from "components/Error";
+import { assertQuerySuccess } from "utils/helper";
 
 const Register = () => {
   const navigate = useNavigate();

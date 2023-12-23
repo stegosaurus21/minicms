@@ -3,11 +3,11 @@ import { Button, Container, Tab, Table, Tabs } from "react-bootstrap";
 import FormCheckInput from "react-bootstrap/esm/FormCheckInput";
 import { useNavigate, useParams } from "react-router-dom";
 import style from "../styles.module.css";
-import { RenderableLeaderboard } from "src/interface";
-import ContestLeaderboard from "src/components/Contests/ContestLeaderboard";
-import { trpc } from "src/utils/trpc";
-import { assertQuerySuccess, round2dp, styleScore } from "src/utils/helper";
-import { error, handleError } from "src/components/Error";
+import { RenderableLeaderboard } from "interface";
+import ContestLeaderboard from "components/Contests/ContestLeaderboard";
+import { trpc } from "utils/trpc";
+import { assertQuerySuccess, round2dp, styleScore } from "utils/helper";
+import { error, handleError } from "components/Error";
 
 const ContestPage = () => {
   const navigate = useNavigate();

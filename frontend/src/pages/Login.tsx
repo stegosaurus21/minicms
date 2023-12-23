@@ -3,9 +3,9 @@ import { Form, Button, Container } from "react-bootstrap";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import styles from "../styles.module.css";
-import { trpc } from "src/utils/trpc";
-import { error, handleError } from "src/components/Error";
-import { assertQuerySuccess } from "src/utils/helper";
+import { trpc } from "utils/trpc";
+import { error, handleError } from "components/Error";
+import { assertQuerySuccess } from "utils/helper";
 
 const Login = () => {
   const navigate = useNavigate();

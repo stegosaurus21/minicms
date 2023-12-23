@@ -1,6 +1,6 @@
 import { Badge, Table } from "react-bootstrap";
-import { prettyDate, round2dp, styleScore } from "src/utils/helper";
-import { Submission } from "src/interface";
+import { prettyDate, round2dp, styleScore } from "utils/helper";
+import { Submission } from "interface";
 import style from "../../styles.module.css";
 import { useNavigate } from "react-router-dom";
 

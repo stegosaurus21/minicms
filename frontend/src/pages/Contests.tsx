@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Container, Table } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
-import { ContestMeta } from "src/interface";
+import { ContestMeta } from "interface";
 import style from "../styles.module.css";
-import TimeDisplay from "src/components/TimeDisplay";
-import { trpc } from "src/utils/trpc";
-import { error, handleError } from "src/components/Error";
-import { assertQuerySuccess } from "src/utils/helper";
+import TimeDisplay from "components/TimeDisplay";
+import { trpc } from "utils/trpc";
+import { error, handleError } from "components/Error";
+import { assertQuerySuccess } from "utils/helper";
 
 const Contests = () => {
   const [now, setNow] = useState(Date.now());

@@ -1,6 +1,6 @@
 import { Table } from "react-bootstrap";
-import { round2dp, styleScore } from "src/utils/helper";
-import { ContestChallengeExternal, RenderableLeaderboard } from "src/interface";
+import { round2dp, styleScore } from "utils/helper";
+import { ContestChallengeExternal, RenderableLeaderboard } from "interface";
 
 const ContestLeaderboard = (props: {
   showUnofficial: boolean;

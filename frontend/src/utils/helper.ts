@@ -3,7 +3,7 @@ import {
   UseTRPCQuerySuccessResult,
 } from "@trpc/react-query/dist/shared";
 import { Duration, format, formatDuration, intervalToDuration } from "date-fns";
-import { error, errorMessages } from "src/components/Error";
+import { error, errorMessages } from "components/Error";
 
 export function contestOpen(starts: number | null, ends: number | null) {
   if (starts && Date.now() < starts) return false;

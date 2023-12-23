@@ -1,4 +1,4 @@
-import { prettyDate, prettyInterval } from "src/utils/helper";
+import { prettyDate, prettyInterval } from "utils/helper";
 
 const TimeDisplay = (props: {
   displayDate: number | null;

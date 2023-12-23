@@ -25,7 +25,9 @@ export interface TokenSetterProp {
   token: [string | null, React.Dispatch<React.SetStateAction<string | null>>];
 }
 
-const url = `http://${config.BACKEND_URL}:${config.BACKEND_PORT}/trpc`;
+const url = `http://${document.location.href}:${
+  import.meta.env.VITE_DEV_PORT || 80
+}/trpc`;
 
 export const App: React.FC<{}> = () => {
   const [queryClient] = useState(() => new QueryClient());

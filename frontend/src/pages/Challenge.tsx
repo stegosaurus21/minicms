@@ -5,13 +5,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import { assertQuerySuccess, round2dp, styleScore } from "src/utils/helper";
+import { assertQuerySuccess, round2dp, styleScore } from "utils/helper";
 import style from "../styles.module.css";
 import "katex/dist/katex.min.css";
 import FormCheckInput from "react-bootstrap/esm/FormCheckInput";
-import ChallengeSubmissions from "src/components/Challenges/ChallengeSubmissions";
-import { trpc } from "src/utils/trpc";
-import { error, handleError } from "src/components/Error";
+import ChallengeSubmissions from "components/Challenges/ChallengeSubmissions";
+import { trpc } from "utils/trpc";
+import { error, handleError } from "components/Error";
 
 const Challenge = () => {
   const navigate = useNavigate();

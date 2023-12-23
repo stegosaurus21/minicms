@@ -5,6 +5,7 @@
     "noEmit": true,
     "resolveJsonModule": true,
     "allowJs": true,
+    "strictNullChecks": true,
     "strict": true
   }
 }

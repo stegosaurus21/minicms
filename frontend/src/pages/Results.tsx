@@ -18,11 +18,11 @@ import {
   round2dp,
   styleScore,
   styleStatus,
-} from "src/utils/helper";
+} from "utils/helper";
 import style from "../styles.module.css";
 import { Buffer } from "buffer";
-import { trpc } from "src/utils/trpc";
-import { error, handleError } from "src/components/Error";
+import { trpc } from "utils/trpc";
+import { error, handleError } from "components/Error";
 
 const Results = () => {
   const navigate = useNavigate();

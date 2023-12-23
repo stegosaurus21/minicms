@@ -3,7 +3,7 @@ import Container from "react-bootstrap/Container";
 import Nav from "react-bootstrap/Nav";
 import Navbar from "react-bootstrap/Navbar";
 import style from "../styles.module.css";
-import { trpc } from "src/utils/trpc";
+import { trpc } from "utils/trpc";
 
 const Header = () => {
   const navigate = useNavigate();
