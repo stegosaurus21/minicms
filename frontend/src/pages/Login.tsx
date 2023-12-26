@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Form, Button, Container } from "react-bootstrap";
+import { Form, Button, Container, Alert } from "react-bootstrap";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import styles from "../styles.module.css";
@@ -13,6 +13,7 @@ const Login = () => {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const login = trpc.auth.login.useMutation();
 
@@ -32,6 +33,15 @@ const Login = () => {
 
   return (
     <Container>
+      <Alert
+        show={error !== ""}
+        variant="danger"
+        onClose={() => setError("")}
+        dismissible
+      >
+        <Alert.Heading>Error</Alert.Heading>
+        <p>{error}</p>
+      </Alert>
       <Form className="w-75">
         <Form.Group>
           <Form.Label>Username</Form.Label>
@@ -63,7 +73,9 @@ const Login = () => {
                     params.get("url") ? `/contests/${params.get("url")}` : "/"
                   );
                 })
-                .catch((e) => {})
+                .catch((e) => {
+                  setError((e as Error).message);
+                })
             }
           >
             Submit

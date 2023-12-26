@@ -17,3 +17,14 @@ A simple contest management system powered by Judge0.
 ## Features for contest runners
 
 - Safe (powered by Judge0)
+
+## TODO
+
+- Admin console
+  - Rejudging
+- Migrate problems to DB?
+- Better token handling
+- Better logging
+- Fix tests D:
+- Bundle with Judge0?
+- Frontend and backend really should be separate images

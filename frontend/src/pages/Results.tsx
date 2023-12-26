@@ -105,7 +105,7 @@ const Results = () => {
   }
 
   const scoring = challenge.data.scoring;
-  const index = submissionInfo.data.index;
+  const index = submissionInfo.data.index + 1;
   const time = submissionInfo.data.time;
   const source = submissionInfo.data.source;
 

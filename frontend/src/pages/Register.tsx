@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
-import { Form, Button, Container } from "react-bootstrap";
+import { Form, Button, Container, Alert } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import styles from "../styles.module.css";
 import { config } from "../config";
@@ -14,6 +14,7 @@ const Register = () => {
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
 
   const validUserNameFormat = () => {
     return /^([A-Za-z0-9-]){3,}$/.test(username);
@@ -49,6 +50,15 @@ const Register = () => {
 
   return (
     <Container>
+      <Alert
+        show={error !== ""}
+        variant="danger"
+        onClose={() => setError("")}
+        dismissible
+      >
+        <Alert.Heading>Error</Alert.Heading>
+        <p>{error}</p>
+      </Alert>
       <Form className="w-75">
         <Form.Group>
           <Form.Label>Username</Form.Label>
@@ -97,10 +107,12 @@ const Register = () => {
           <Button
             variant="primary"
             onClick={() => {
-              console.log("huhhh");
               register
                 .mutateAsync({ username: username, password: password })
-                .then(() => navigate("/auth/login"));
+                .then(() => navigate("/auth/login"))
+                .catch((e) => {
+                  setError((e as Error).message);
+                });
             }}
             disabled={!canSubmit()}
           >

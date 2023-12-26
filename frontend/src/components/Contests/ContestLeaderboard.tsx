@@ -13,7 +13,7 @@ const ContestLeaderboard = (props: {
     (prev, next) => prev + next.max_score,
     0
   );
-  console.log(leaderboard);
+
   return (
     <Table bordered className="w-75">
       <thead>

@@ -25,8 +25,10 @@ export interface TokenSetterProp {
   token: [string | null, React.Dispatch<React.SetStateAction<string | null>>];
 }
 
-const url = `http://${document.location.href}:${
-  import.meta.env.VITE_DEV_PORT || 80
+const url = `${document.location.protocol}//${
+  import.meta.env.DEV
+    ? `${document.location.hostname}:${import.meta.env.VITE_DEV_PORT}`
+    : document.location.host
 }/trpc`;
 
 export const App: React.FC<{}> = () => {

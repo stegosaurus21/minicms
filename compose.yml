@@ -1,0 +1,13 @@
+services:
+  minicms:
+    image: minicms
+    container_name: minicms
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - "db:/minicms/db"
+    deploy:
+      mode: global
+volumes:
+  db:

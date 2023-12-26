@@ -33,7 +33,7 @@ const ChallengeSubmissions = (props: {
               onClick={() => navigate(`./${v.token}`)}
             >
               <td>
-                {v.index}{" "}
+                {v.index + 1}{" "}
                 {v.official ? "" : <Badge bg="secondary">Unofficial</Badge>}
               </td>
               <td className={`${styleScore(v.score, max_score, "bg-")}`}>

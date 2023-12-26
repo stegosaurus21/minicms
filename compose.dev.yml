@@ -1,0 +1,12 @@
+services:
+  minicms:
+    working_dir: /minicms/backend
+    command: npm run dev
+    develop:
+      watch:
+        - path: ./backend/public
+          action: sync
+          target: /minicms/backend/public
+        - path: ./backend/src
+          action: sync
+          target: /minicms/backend/src

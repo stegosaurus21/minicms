@@ -65,7 +65,7 @@ export const authRouter = router({
         } else {
           throw new TRPCError({
             code: "FORBIDDEN",
-            message: "Incorrect password or user not found.",
+            message: "Incorrect username or password.",
           });
         }
       } catch (e) {
@@ -73,8 +73,11 @@ export const authRouter = router({
           if (e.code == "P2025")
             throw new TRPCError({
               code: "FORBIDDEN",
-              message: "Incorrect password or user not found.",
+              message: "Incorrect username or password.",
             });
+        }
+        if (e instanceof TRPCError) {
+          throw e;
         }
         throw createError(
           500,
