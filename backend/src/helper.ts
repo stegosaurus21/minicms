@@ -1,4 +1,7 @@
+import crypto from "crypto";
 import { getTime, parse } from "date-fns";
+
+const PASS_SALT = "__HACKERN'T__";
 
 export function throwError(err: any) {
   if (err) throw err;
@@ -37,4 +40,11 @@ export function insertKeys(from: object, to: object): object {
       to[x as keyof typeof to] = from[x as keyof typeof from];
   });
   return to;
+}
+
+export function hash(plain: string): string {
+  return crypto
+    .createHash("sha256")
+    .update(plain + PASS_SALT)
+    .digest("hex");
 }

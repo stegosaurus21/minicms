@@ -10,8 +10,10 @@ COPY ./backend/.docker.env ./backend/.env
 
 WORKDIR /minicms/backend
 RUN npm ci
+
 RUN npx prisma generate
 RUN npx prisma migrate deploy
+RUN npx prisma db seed
 
 WORKDIR /minicms
 COPY ./frontend ./frontend

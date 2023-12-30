@@ -1,4 +1,5 @@
 *.env
 node_modules/**
 upload/**
-prisma/dev.db
+prisma/db/**
+public/**

@@ -4,6 +4,7 @@ import style from "../styles.module.css";
 import { LoadingMarker } from "utils/helper";
 
 export const errorMessages = {
+  "ERR_404": "Page not found.",
   "ERR_AUTH": "A server authentication error occurred.",
   "ERR_CHAL_MISSING": "No challenge was provided.",
   "ERR_CHAL_404": "The challenge was not found.",
@@ -25,7 +26,7 @@ export const errorMessages = {
   "ERR_GENERAL": "An error occurred.",
 };
 
-const ErrorPage = (props: { messageId: string }) => {
+const ErrorPage = (props: { messageId: keyof typeof errorMessages }) => {
   const navigate = useNavigate();
   return (
     <Container>
@@ -46,13 +47,20 @@ export function handleError(e: any) {
   if (e instanceof LoadingMarker) {
     return <></>;
   } else if (e instanceof KnownError) {
-    return <ErrorPage messageId={e.message} />;
+    return <ErrorPage messageId={e.messageId} />;
   } else {
     throw e;
   }
 }
 
-export class KnownError extends Error {}
+export class KnownError extends Error {
+  messageId: keyof typeof errorMessages;
+
+  constructor(messageId: keyof typeof errorMessages) {
+    super(errorMessages[messageId]);
+    this.messageId = messageId;
+  }
+}
 
 export function error(messageId: keyof typeof errorMessages) {
   return new KnownError(messageId);

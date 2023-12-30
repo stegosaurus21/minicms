@@ -33,8 +33,6 @@ app.use(morgan("dev"));
 app.use(fileUpload({ createParentPath: true }));
 app.use(cookie_parser());
 
-app.use(express.static("public"));
-
 app.use(
   "/trpc",
   trpcExpress.createExpressMiddleware({
@@ -64,6 +62,14 @@ app.put(
 );
 
 app.use(errorHandler);
+app.use(express.static("public"));
+app.get("*", (req, res) => {
+  res.sendFile("index.html", { root: "public" }, (err) => {
+    res.end();
+
+    if (err) throw err;
+  });
+});
 
 const server = app.listen(parseInt(BACKEND_PORT), BACKEND_URL, async () => {
   const languagesReq = await fetch(

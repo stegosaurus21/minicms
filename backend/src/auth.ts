@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import createError, { HttpError } from "http-errors";
 import { AuthValidation, Session } from "./interface";
 import { v4 } from "uuid";
@@ -8,22 +7,24 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { publicProcedure, router } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { hash } from "./helper";
 
-const PASS_SALT = "__HACKERN'T__";
 export const tokens: Map<String, Session> = new Map<String, Session>();
 
-function hash(plain: string): string {
-  return crypto
-    .createHash("sha256")
-    .update(plain + PASS_SALT)
-    .digest("hex");
-}
-
 export const authRouter = router({
+  usernameAvailable: publicProcedure
+    .input(z.object({ username: z.string() }))
+    .query(async ({ input }) => {
+      return (
+        (await prisma.user.findUnique({
+          where: { username: input.username },
+        })) === null
+      );
+    }),
+
   register: publicProcedure
     .input(z.object({ username: z.string(), password: z.string().min(6) }))
     .mutation(async ({ input }) => {
-      console.log(input);
       try {
         await prisma.user.create({
           data: { username: input.username, password: hash(input.password) },
@@ -46,7 +47,6 @@ export const authRouter = router({
   login: publicProcedure
     .input(z.object({ username: z.string(), password: z.string() }))
     .mutation(async ({ input }) => {
-      console.log(input);
       try {
         const result = await prisma.user.findUniqueOrThrow({
           where: {

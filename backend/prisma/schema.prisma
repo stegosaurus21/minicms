@@ -6,17 +6,24 @@ generator client {
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
+generator zod {
+  provider          = "zod-prisma-types"
+  useTypeAssertions = true
+}
+
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id           Int           @id @default(autoincrement())
-  username     String        @unique
-  password     String
-  submissions  Submission[]
-  participants Participant[]
+  id                   Int           @id @default(autoincrement())
+  username             String        @unique
+  password             String
+  force_reset_password Boolean       @default(false)
+  admin                Boolean       @default(false)
+  submissions          Submission[]
+  participants         Participant[]
 }
 
 model Submission {
@@ -51,4 +58,56 @@ model Participant {
   time    DateTime
 
   @@id([user_id, contest])
+}
+
+model Contest {
+  name        String             @id
+  start_time  DateTime
+  end_time    DateTime
+  challenges  ContestChallenge[]
+  description String
+}
+
+model ContestChallenge {
+  challenge      Challenge @relation(fields: [challenge_name], references: [name])
+  challenge_name String
+  contest        Contest   @relation(fields: [contest_name], references: [name])
+  contest_name   String
+  max_score      Int
+
+  @@id([challenge_name, contest_name])
+}
+
+model Challenge {
+  name          String             @id
+  type          String             @default("SIMPLE_IO")
+  tasks         Task[]
+  contests      ContestChallenge[]
+  description   String?
+  input_format  String?
+  output_format String?
+  scoring       String?
+  tests         Test[]
+}
+
+model Task {
+  challenge      Challenge @relation(fields: [challenge_name], references: [name])
+  challenge_name String
+  task_number    Int
+  weight         Int       @default(1)
+  is_example     Boolean   @default(false)
+  tasks          Test[]
+
+  @@id([challenge_name, task_number])
+}
+
+model Test {
+  task           Task      @relation(fields: [challenge_name, task_number], references: [challenge_name, task_number])
+  challenge      Challenge @relation(fields: [challenge_name], references: [name])
+  challenge_name String
+  task_number    Int
+  input          String
+  output         String
+
+  @@id([challenge_name, task_number, input])
 }

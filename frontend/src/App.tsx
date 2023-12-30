@@ -16,6 +16,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { config } from "./config";
 import superjson from "superjson";
 import { trpc } from "./utils/trpc";
+import ErrorPage from "~components/Error";
 
 export interface TokenProp {
   token: string | null;
@@ -90,6 +91,7 @@ export const App: React.FC<{}> = () => {
             />
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/register" element={<Register />} />
+            <Route path="*" element={<ErrorPage messageId="ERR_404" />} />
           </Routes>
         </Router>
       </QueryClientProvider>
