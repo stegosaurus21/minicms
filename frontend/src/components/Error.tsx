@@ -24,9 +24,12 @@ export const errorMessages = {
   "ERR_SUBMISSION_FETCH":
     "A server error occurred when fetching the submission.",
   "ERR_GENERAL": "An error occurred.",
+  "ERR_NOT_ADMIN": "You do not have access to administrator controls",
 };
 
-const ErrorPage = (props: { messageId: keyof typeof errorMessages }) => {
+export type ErrorCode = keyof typeof errorMessages;
+
+const ErrorPage = (props: { messageId: ErrorCode }) => {
   const navigate = useNavigate();
   return (
     <Container>
@@ -35,10 +38,7 @@ const ErrorPage = (props: { messageId: keyof typeof errorMessages }) => {
       </span>
       <h1>Error</h1>
       <p>Code: {props.messageId}</p>
-      <p>
-        {errorMessages[props.messageId as keyof typeof errorMessages] ||
-          "An unknown error occurred."}
-      </p>
+      <p>{errorMessages[props.messageId]}</p>
     </Container>
   );
 };
@@ -54,15 +54,15 @@ export function handleError(e: any) {
 }
 
 export class KnownError extends Error {
-  messageId: keyof typeof errorMessages;
+  messageId: ErrorCode;
 
-  constructor(messageId: keyof typeof errorMessages) {
+  constructor(messageId: ErrorCode) {
     super(errorMessages[messageId]);
     this.messageId = messageId;
   }
 }
 
-export function error(messageId: keyof typeof errorMessages) {
+export function error(messageId: ErrorCode) {
   return new KnownError(messageId);
 }
 

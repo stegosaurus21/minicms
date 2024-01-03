@@ -10,3 +10,6 @@ services:
         - path: ./backend/src
           action: sync
           target: /minicms/backend/src
+        - path: ./backend/prisma/seed.ts
+          action: sync
+          target: /minicms/backend/prisma/seed.ts

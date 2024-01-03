@@ -8,6 +8,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { error, handleError } from "components/Error";
 import { assertQuerySuccess } from "utils/helper";
 
+export function passwordOk(password: string) {
+  return password.length >= 6;
+}
+
 const Register = () => {
   const navigate = useNavigate();
 
@@ -20,21 +24,13 @@ const Register = () => {
     return /^([A-Za-z0-9-]){3,}$/.test(username);
   };
 
-  const passwordOk = () => {
-    return password.length >= 6;
-  };
-
   const canSubmit = () => {
-    return validUserNameFormat() && passwordOk() && password === confirm;
-  };
-
-  const updatePassword = (value: string) => {
-    setPassword(value);
+    return (
+      validUserNameFormat() && passwordOk(password) && password === confirm
+    );
   };
 
   const register = trpc.auth.register.useMutation();
-
-  const queryClient = useQueryClient();
   const user = trpc.auth.validate.useQuery();
 
   try {
@@ -80,10 +76,10 @@ const Register = () => {
           <Form.Control
             required
             type="password"
-            onChange={(event) => updatePassword(event.target.value)}
+            onChange={(event) => setPassword(event.target.value)}
           />
           <Form.Text className="text-danger">
-            {password === "" || passwordOk()
+            {password === "" || passwordOk(password)
               ? " "
               : "Password must be at least 6 characters."}
           </Form.Text>

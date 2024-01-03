@@ -7,8 +7,11 @@ import { trpc } from "utils/trpc";
 
 const Header = () => {
   const navigate = useNavigate();
-  const utils = trpc.useContext();
+  const utils = trpc.useUtils();
   const user = trpc.auth.validate.useQuery();
+  const admin = trpc.auth.isAdmin.useQuery(undefined, {
+    enabled: user.isSuccess && user.data.isLoggedIn,
+  });
   const logout = trpc.auth.logout.useMutation();
 
   return (
@@ -25,6 +28,15 @@ const Header = () => {
           <Nav.Link
             as="span"
             style={{ cursor: "pointer" }}
+            onClick={() => navigate("/admin")}
+            hidden={!admin.isSuccess || !admin.data}
+          >
+            Administration
+          </Nav.Link>
+
+          <Nav.Link
+            as="span"
+            style={{ cursor: "pointer" }}
             onClick={() => navigate("/contests")}
           >
             Contests
@@ -36,8 +48,8 @@ const Header = () => {
               user.isSuccess && !user.data.isLoggedIn
                 ? navigate("/auth/login")
                 : logout.mutateAsync().then(() => {
-                    utils.auth.invalidate();
                     localStorage.removeItem("token");
+                    utils.auth.invalidate();
                     navigate("/");
                   })
             }

@@ -1,4 +1,3 @@
-import { protectedProcedure } from "./auth";
 import { prisma } from "./server";
 import { TRPCError } from "@trpc/server";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
@@ -14,6 +13,7 @@ import {
   TestSchema,
   TestWhereUniqueInputSchema,
 } from "../prisma/generated/zod";
+import { isAdmin, protectedProcedure } from "./auth";
 
 const adminProcedure = protectedProcedure.use(async ({ next, ctx }) => {
   const { uId } = ctx;
@@ -28,11 +28,6 @@ const adminProcedure = protectedProcedure.use(async ({ next, ctx }) => {
 });
 
 export const adminRouter = router({
-  isAdmin: protectedProcedure.query(async ({ ctx }) => {
-    const { uId } = ctx;
-    return isAdmin(uId);
-  }),
-
   updateContest: adminProcedure
     .input(
       z.object({ target: ContestWhereUniqueInputSchema, data: ContestSchema })
@@ -90,16 +85,3 @@ export const adminRouter = router({
       });
     }),
 });
-
-async function isAdmin(uId: number) {
-  return (
-    await prisma.user.findUniqueOrThrow({
-      select: {
-        admin: true,
-      },
-      where: {
-        id: uId,
-      },
-    })
-  ).admin;
-}

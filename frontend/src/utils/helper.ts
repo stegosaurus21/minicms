@@ -4,6 +4,7 @@ import {
 } from "@trpc/react-query/dist/shared";
 import { Duration, format, formatDuration, intervalToDuration } from "date-fns";
 import { error, errorMessages } from "components/Error";
+import { TRPCClientError } from "@trpc/client";
 
 export function contestOpen(starts: number | null, ends: number | null) {
   if (starts && Date.now() < starts) return false;
@@ -89,4 +90,16 @@ export function assertAllQueriesSuccess<a, b>(
       ? error(errorCode)
       : new Error("Query success assertion failed.");
   if (queries.find((x) => x.isFetching)) throw new LoadingMarker();
+}
+
+export function retryUnlessForbidden(failureCount: number, error: unknown) {
+  if (!(error instanceof TRPCClientError)) {
+    return failureCount < 3;
+  }
+
+  if (error.data.code === "FORBIDDEN") {
+    return false;
+  }
+
+  return failureCount < 3;
 }

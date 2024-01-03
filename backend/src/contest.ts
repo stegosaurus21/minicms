@@ -15,7 +15,7 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { publicProcedure, router } from "./trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { protectedProcedure } from "./auth";
+import { isAdmin, protectedProcedure } from "./auth";
 
 const publicContestProcedure = publicProcedure
   .input(z.object({ contest: z.string() }))
@@ -230,6 +230,13 @@ export async function checkContestAuth(
   uId: number,
   contest: string
 ): Promise<ContestValidation> {
+  if (await isAdmin(uId)) {
+    return {
+      joined: true,
+      joinTime: new Date(0),
+    };
+  }
+
   const userContests = await prisma.participant.findMany({
     select: { contest: true, time: true },
     where: { user_id: uId },

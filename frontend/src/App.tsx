@@ -17,6 +17,9 @@ import { config } from "./config";
 import superjson from "superjson";
 import { trpc } from "./utils/trpc";
 import ErrorPage from "~components/Error";
+import { AdminHome } from "~pages/administration/AdminHome";
+import { retryUnlessForbidden } from "~utils/helper";
+import { AdminContest } from "~pages/administration/AdminContest";
 
 export interface TokenProp {
   token: string | null;
@@ -33,7 +36,16 @@ const url = `${document.location.protocol}//${
 }/trpc`;
 
 export const App: React.FC<{}> = () => {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: retryUnlessForbidden,
+          },
+        },
+      })
+  );
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [
@@ -91,6 +103,8 @@ export const App: React.FC<{}> = () => {
             />
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/register" element={<Register />} />
+            <Route path="/admin" element={<AdminHome />} />
+            <Route path="/admin/:contest" element={<AdminContest />} />
             <Route path="*" element={<ErrorPage messageId="ERR_404" />} />
           </Routes>
         </Router>

@@ -11,7 +11,43 @@ import { hash } from "./helper";
 
 export const tokens: Map<String, Session> = new Map<String, Session>();
 
+export async function isAdmin(uId: number) {
+  return (
+    await prisma.user.findUniqueOrThrow({
+      select: {
+        admin: true,
+      },
+      where: {
+        id: uId,
+      },
+    })
+  ).admin;
+}
+
+export const protectedProcedure = publicProcedure.use(({ next, ctx }) => {
+  const { token, uId } = ctx;
+
+  if (token === undefined || uId === undefined) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Invalid or expired token.",
+    });
+  }
+
+  return next({
+    ctx: {
+      token: token,
+      uId: uId,
+    },
+  });
+});
+
 export const authRouter = router({
+  isAdmin: protectedProcedure.query(async ({ ctx }) => {
+    const { uId } = ctx;
+    return isAdmin(uId);
+  }),
+
   usernameAvailable: publicProcedure
     .input(z.object({ username: z.string() }))
     .query(async ({ input }) => {
@@ -29,8 +65,6 @@ export const authRouter = router({
         await prisma.user.create({
           data: { username: input.username, password: hash(input.password) },
         });
-
-        return true;
       } catch (err) {
         console.log(err);
         if (err instanceof PrismaClientKnownRequestError) {
@@ -61,7 +95,11 @@ export const authRouter = router({
             timeout: Date.now() + 1000 * 60 * 60 * 12,
           };
           tokens.set(newToken, newSession);
-          return newToken;
+
+          return {
+            token: newToken,
+            forceResetPassword: result.force_reset_password,
+          };
         } else {
           throw new TRPCError({
             code: "FORBIDDEN",
@@ -101,24 +139,36 @@ export const authRouter = router({
 
     return { isLoggedIn: true, username: await getUsername(session.uId) };
   }),
-});
 
-export const protectedProcedure = publicProcedure.use(({ next, ctx }) => {
-  const { token, uId } = ctx;
+  changePassword: protectedProcedure
+    .input(z.object({ password: z.string().min(6) }))
+    .mutation(async ({ ctx, input }) => {
+      const { uId } = ctx;
+      const { password } = input;
 
-  if (token === undefined || uId === undefined) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "Invalid or expired token.",
-    });
-  }
+      const result = await prisma.user.findUniqueOrThrow({
+        where: {
+          id: uId,
+        },
+      });
 
-  return next({
-    ctx: {
-      token: token,
-      uId: uId,
-    },
-  });
+      if (hash(password) === result.password) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "New password cannot be the same as the existing password.",
+        });
+      }
+
+      await prisma.user.update({
+        where: {
+          id: uId,
+        },
+        data: {
+          password: hash(password),
+          force_reset_password: false,
+        },
+      });
+    }),
 });
 
 export async function getUser(req: Request): Promise<number> {

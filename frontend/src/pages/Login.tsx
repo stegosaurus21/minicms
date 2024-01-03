@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Form, Button, Container, Alert } from "react-bootstrap";
+import { Form, Button, Container, Alert, Modal } from "react-bootstrap";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import styles from "../styles.module.css";
 import { trpc } from "utils/trpc";
 import { error, handleError } from "components/Error";
 import { assertQuerySuccess } from "utils/helper";
+import { passwordOk } from "./Register";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -15,10 +16,27 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  const login = trpc.auth.login.useMutation();
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
-  const utils = trpc.useContext();
+  const login = trpc.auth.login.useMutation();
+  const changePassword = trpc.auth.changePassword.useMutation();
+
+  const utils = trpc.useUtils();
   const user = trpc.auth.validate.useQuery();
+
+  function redirect() {
+    navigate(params.get("url") ? `/contests/${params.get("url")}` : "/");
+  }
+
+  function canSubmit() {
+    return (
+      passwordOk(newPassword) &&
+      newPassword === confirmNewPassword &&
+      newPassword !== password
+    );
+  }
 
   try {
     assertQuerySuccess(user, "ERR_AUTH");
@@ -26,8 +44,8 @@ const Login = () => {
     return handleError(e);
   }
 
-  if (user.data.isLoggedIn) {
-    navigate("/");
+  if (user.data.isLoggedIn && !showPasswordModal) {
+    redirect();
     return <></>;
   }
 
@@ -42,6 +60,70 @@ const Login = () => {
         <Alert.Heading>Error</Alert.Heading>
         <p>{error}</p>
       </Alert>
+
+      <Modal
+        show={showPasswordModal}
+        onHide={redirect}
+        backdrop="static"
+        keyboard={false}
+      >
+        <Modal.Header>
+          <Modal.Title>Reset password</Modal.Title>
+          <Modal.Body>Please change your password to continue.</Modal.Body>
+          <Form>
+            <Form.Group>
+              <Form.Label>Password</Form.Label>
+              <Form.Control
+                required
+                type="password"
+                onChange={(event) => setNewPassword(event.target.value)}
+              />
+              <Form.Text className="text-danger">
+                {newPassword === "" || passwordOk(newPassword)
+                  ? newPassword === password
+                    ? "New password cannot be the same as existing password."
+                    : ""
+                  : "Password must be at least 6 characters."}
+              </Form.Text>
+            </Form.Group>
+            <Form.Group>
+              <Form.Label>Confirm Password</Form.Label>
+              <Form.Control
+                required
+                type="password"
+                onChange={(event) => setConfirmNewPassword(event.target.value)}
+              />
+              <Form.Text
+                className="text-danger"
+                hidden={
+                  confirmNewPassword === "" ||
+                  newPassword === confirmNewPassword
+                }
+              >
+                Passwords do not match
+              </Form.Text>
+            </Form.Group>
+            <Button
+              variant="primary"
+              onClick={() => {
+                changePassword
+                  .mutateAsync({ password: newPassword })
+                  .then(() => {
+                    setShowPasswordModal(false);
+                    redirect();
+                  })
+                  .catch((e) => {
+                    console.log(e);
+                  });
+              }}
+              disabled={!canSubmit()}
+            >
+              Submit
+            </Button>
+          </Form>
+        </Modal.Header>
+      </Modal>
+
       <Form className="w-75">
         <Form.Group>
           <Form.Label>Username</Form.Label>
@@ -66,12 +148,14 @@ const Login = () => {
             onClick={() =>
               login
                 .mutateAsync({ username: username, password: password })
-                .then((token) => {
+                .then(({ token, forceResetPassword }) => {
                   localStorage.setItem("token", token);
                   utils.auth.invalidate();
-                  navigate(
-                    params.get("url") ? `/contests/${params.get("url")}` : "/"
-                  );
+                  if (forceResetPassword) {
+                    setShowPasswordModal(true);
+                  } else {
+                    redirect();
+                  }
                 })
                 .catch((e) => {
                   setError((e as Error).message);

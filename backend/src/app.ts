@@ -4,9 +4,11 @@ import { contestRouter } from "./contest";
 import { challengeRouter } from "./challenge";
 import { resultsRouter } from "./results";
 import { judgeLanguages } from "./server";
+import { adminRouter } from "./admin";
 
 export const appRouter = router({
   auth: authRouter,
+  admin: adminRouter,
   contest: contestRouter,
   challenge: challengeRouter,
   results: resultsRouter,
