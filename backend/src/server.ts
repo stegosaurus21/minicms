@@ -4,7 +4,7 @@ import cors from "cors";
 import fileUpload from "express-fileupload";
 import * as trpcExpress from "@trpc/server/adapters/express";
 import { createContext } from "./context";
-import { getLeaderboard, judgeCallback } from "./results";
+import { judgeCallback } from "./results";
 import { clear, errorHandler } from "./other";
 import morgan from "morgan";
 import { v4 } from "uuid";
@@ -49,12 +49,13 @@ app.delete("/clear", async (req, res) => {
 
 export const judgeSecret = v4();
 app.put(
-  `/callback/${judgeSecret}/:submission/:testNum/:timeSent`,
+  `/callback/${judgeSecret}/:submission/:taskNum/:testNum/:timeSent`,
   async (req, res) => {
     if (parseInt(req.params.timeSent) < lastClear) return res.json();
     await judgeCallback(
       req.body,
       req.params.submission,
+      parseInt(req.params.taskNum),
       parseInt(req.params.testNum)
     );
     return res.json();

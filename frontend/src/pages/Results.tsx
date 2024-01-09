@@ -10,6 +10,7 @@ import {
 } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import {
+  ArrayElement,
   LoadingMarker,
   assertAllQueriesSuccess,
   assertQuerySuccess,
@@ -36,47 +37,63 @@ const Results = () => {
     return handleError(e);
   }
 
-  const queryContestName = (params["contest"] || "").replace(":", "/");
-  const queryChallengeName = (params["challenge"] || "").replace(":", "/");
-  const querySubmissionName = (params["submission"] || "").replace(":", "/");
+  const paramContestName = (params["contest"] || "").replace(":", "/");
+  const paramChallengeName = (params["challenge"] || "").replace(":", "/");
+  const paramSubmissionName = (params["submission"] || "").replace(":", "/");
 
-  const user = trpc.auth.validate.useQuery();
-  const challenge = trpc.challenge.get.useQuery(
-    { contest: queryContestName, challenge: queryChallengeName },
+  const queryUser = trpc.auth.validate.useQuery();
+  const queryChallenge = trpc.challenge.get.useQuery(
+    { contest: paramContestName, challenge: paramChallengeName },
     {
-      enabled: queryContestName !== "" && queryChallengeName !== "",
+      enabled: paramContestName !== "" && paramChallengeName !== "",
     }
   );
-  const submissionValidation = trpc.results.validate.useQuery({
-    submission: querySubmissionName,
+  const queryValidation = trpc.results.validate.useQuery({
+    submission: paramSubmissionName,
   });
-  const submissionInfo = trpc.results.getSubmission.useQuery({
-    contest: queryContestName,
-    challenge: queryChallengeName,
-    submission: querySubmissionName,
+  const querySubmission = trpc.results.getSubmission.useQuery({
+    contest: paramContestName,
+    challenge: paramChallengeName,
+    submission: paramSubmissionName,
   });
-  const score = trpc.results.getScore.useQuery(
+  const queryScore = trpc.results.getScore.useQuery(
     {
-      submission: querySubmissionName,
+      submission: paramSubmissionName,
     },
     { trpc: { context: { skipBatch: true } } }
   );
-  const taskResults = trpc.useQueries((t) =>
-    Array.from({ length: challenge.data?.tasks || 0 }, (_, i) =>
+  const queryResults = trpc.useQueries((t) => {
+    const tests = queryChallenge.data?.challenge.tests || [];
+    return tests.map((x) =>
       t.results.getTest(
-        { submission: querySubmissionName, test: i },
-        { enabled: challenge.isSuccess }
+        {
+          submission: paramSubmissionName,
+          task: x.task_number,
+          test: x.test_number,
+        },
+        {
+          enabled: queryChallenge.isSuccess,
+          placeholderData: {
+            token: "",
+            task_number: x.task_number,
+            test_number: x.test_number,
+            time: 0,
+            memory: 0,
+            status: "Judging",
+            compile_output: "",
+          },
+        }
       )
-    )
-  );
+    );
+  });
 
   try {
-    assertQuerySuccess(user, "ERR_AUTH");
+    assertQuerySuccess(queryUser, "ERR_AUTH");
   } catch (e) {
     return handleError(e);
   }
 
-  if (!user.data.isLoggedIn) {
+  if (!queryUser.data.isLoggedIn) {
     return (
       <Container>
         <p>You need to be signed in to view this submission.</p>
@@ -95,30 +112,30 @@ const Results = () => {
   }
 
   try {
-    assertQuerySuccess(submissionValidation, "ERR_SUBMISSION_404");
-    if (!submissionValidation.data.isViewable)
-      throw error("ERR_SUBMISSION_404");
-    assertQuerySuccess(challenge, "ERR_CHAL_404");
-    assertQuerySuccess(submissionInfo, "ERR_SUBMISSION_FETCH");
+    assertQuerySuccess(queryValidation, "ERR_SUBMISSION_404");
+    if (!queryValidation.data.isViewable) throw error("ERR_SUBMISSION_404");
+    assertQuerySuccess(queryChallenge, "ERR_CHAL_404");
+    assertQuerySuccess(querySubmission, "ERR_SUBMISSION_FETCH");
   } catch (e) {
     return handleError(e);
   }
 
-  const scoring = challenge.data.scoring;
-  const index = submissionInfo.data.index + 1;
-  const time = submissionInfo.data.time;
-  const source = submissionInfo.data.source;
+  const { challenge, max_score } = queryChallenge.data;
+  const { index, time, source } = querySubmission.data;
+  const { tasks } = challenge;
+  const totalWeight = tasks.reduce((p, n) => p + n.weight, 0);
 
-  const subtaskMaxScore = (task: number) => {
-    const totalWeight = scoring.reduce((prev, next) => prev + next.weight, 0);
-    return (challenge.data.max_score * scoring[task].weight) / totalWeight;
-  };
+  function subtaskMaxScore(task: ArrayElement<typeof tasks>) {
+    return (task.weight / totalWeight) * max_score;
+  }
 
-  const subtaskScore = (task: number) => {
-    if (scoring === undefined || scoring === null) return 0;
+  function subtaskScore(task: ArrayElement<typeof tasks>) {
+    const queryTaskTests = queryResults.filter(
+      (x) => x.data?.task_number === task.task_number
+    );
 
     try {
-      assertAllQueriesSuccess(taskResults);
+      assertAllQueriesSuccess(queryTaskTests);
     } catch (e) {
       if (e instanceof LoadingMarker) {
         return null;
@@ -127,16 +144,22 @@ const Results = () => {
       }
     }
 
-    const acceptedTasks = scoring[task].tasks.filter(
-      (x) => taskResults[x].data.status === "Accepted"
+    const acceptedTasks = queryTaskTests.filter(
+      (x) => x.data.status === "Accepted"
     ).length;
-    if (scoring[task].mode === "BATCH") {
-      if (acceptedTasks === scoring[task].tasks.length)
-        return subtaskMaxScore(task);
-      return 0;
+    switch (task.type) {
+      case "BATCH":
+        if (acceptedTasks === queryTaskTests.length)
+          return subtaskMaxScore(task);
+        return 0;
+
+      case "INDIVIDUAL":
+        return (subtaskMaxScore(task) * acceptedTasks) / queryTaskTests.length;
+
+      default:
+        return null;
     }
-    return (subtaskMaxScore(task) * acceptedTasks) / scoring[task].tasks.length;
-  };
+  }
 
   return (
     <Container>
@@ -144,29 +167,31 @@ const Results = () => {
         {"<"} Back to challenge
       </span>
       <h1 className="mt-1">
-        {challenge.data.name}{" "}
-        {score.isSuccess ? (
+        {challenge.title}{" "}
+        {queryScore.isSuccess ? (
           <Badge
-            bg={styleScore(score.data, challenge.data.max_score)}
-          >{`${round2dp(score.data)}/${challenge.data.max_score}`}</Badge>
+            bg={styleScore(queryScore.data, queryChallenge.data.max_score)}
+          >{`${round2dp(queryScore.data)}/${
+            queryChallenge.data.max_score
+          }`}</Badge>
         ) : (
           <Spinner as="span" animation="border"></Spinner>
         )}
       </h1>
       <p className={style.bold}>
-        Submission #{index} - {prettyDate(time)}
+        Submission #{index + 1} - {prettyDate(time)}
       </p>
       <Accordion
         alwaysOpen
-        defaultActiveKey={scoring.map((_, i) => `${i + 1}`)}
+        defaultActiveKey={tasks.map((x) => `${x.task_number + 1}`)}
       >
-        {scoring.map((x, i) => (
-          <Accordion.Item eventKey={`${i + 1}`}>
+        {tasks.map((task) => (
+          <Accordion.Item eventKey={`${task.task_number + 1}`}>
             <Accordion.Header>
               <h5>
-                {scoring.length > 1 ? `Subtask ${i + 1}` : "Tasks"}
+                {tasks.length > 1 ? `Subtask ${task.task_number + 1}` : "Tests"}
                 <span> </span>
-                {x.mode === "BATCH" ? (
+                {task.type === "BATCH" ? (
                   <OverlayTrigger
                     trigger="hover"
                     placement="top"
@@ -187,11 +212,11 @@ const Results = () => {
                   <></>
                 )}
                 <span> </span>
-                {subtaskScore(i) !== null ? (
+                {subtaskScore(task) !== null ? (
                   <Badge
-                    bg={styleScore(subtaskScore(i), subtaskMaxScore(i))}
-                  >{`${round2dp(subtaskScore(i))}/${subtaskMaxScore(
-                    i
+                    bg={styleScore(subtaskScore(task), subtaskMaxScore(task))}
+                  >{`${round2dp(subtaskScore(task))}/${subtaskMaxScore(
+                    task
                   )}`}</Badge>
                 ) : (
                   <Spinner as="span" size="sm" animation="border"></Spinner>
@@ -209,40 +234,43 @@ const Results = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {x.tasks.map((x, j) => {
-                    const result = taskResults[x];
-                    return (
-                      <tr>
-                        <td>{`${j + 1}`}</td>
-                        <td>{`${
-                          result.isSuccess ? `${result.data.time || ""} s` : ""
-                        }`}</td>
-                        <td>{`${
-                          result.isSuccess
-                            ? parseMemory(result.data.memory) || ""
-                            : ""
-                        }`}</td>
-                        <td
-                          className={`bg-${styleStatus(
-                            result.isSuccess ? result.data.status : "Checking"
-                          )}`}
-                        >
-                          {result.isSuccess ? (
-                            result.data.status
-                          ) : (
-                            <>
-                              <Spinner
-                                as="span"
-                                size="sm"
-                                animation="border"
-                              ></Spinner>{" "}
-                              Checking
-                            </>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {queryResults
+                    .filter((x) => x.data?.task_number === task.task_number)
+                    .map((result, j) => {
+                      return (
+                        <tr>
+                          <td>{`${j + 1}`}</td>
+                          <td>{`${
+                            result.isSuccess
+                              ? `${result.data.time || ""} s`
+                              : ""
+                          }`}</td>
+                          <td>{`${
+                            result.isSuccess
+                              ? parseMemory(result.data.memory) || ""
+                              : ""
+                          }`}</td>
+                          <td
+                            className={`bg-${styleStatus(
+                              result.isSuccess ? result.data.status : "Judging"
+                            )}`}
+                          >
+                            {result.isSuccess ? (
+                              result.data.status
+                            ) : (
+                              <>
+                                <Spinner
+                                  as="span"
+                                  size="sm"
+                                  animation="border"
+                                ></Spinner>{" "}
+                                Judging
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </Table>
             </Accordion.Body>
@@ -251,12 +279,12 @@ const Results = () => {
       </Accordion>
       <h2 className="mt-3">Compilation output</h2>
       <Container className="border mt-3 p-2">
-        {taskResults[0].isSuccess &&
-        taskResults[0].data.compile_output !== "" ? (
+        {queryResults[0].isSuccess &&
+        queryResults[0].data.compile_output !== "" ? (
           <pre>
             <samp>
               {Buffer.from(
-                taskResults[0].data.compile_output,
+                queryResults[0].data.compile_output,
                 "base64"
               ).toString()}
             </samp>

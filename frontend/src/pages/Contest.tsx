@@ -19,7 +19,7 @@ const ContestPage = () => {
 
   const queryContestName = params["contest"].replace(":", "/");
 
-  const utils = trpc.useContext();
+  const utils = trpc.useUtils();
   const joinContest = trpc.contest.join.useMutation();
 
   const leaderboard = trpc.results.getLeaderboard.useQuery({
@@ -62,8 +62,8 @@ const ContestPage = () => {
         <span className={style.returnLink} onClick={() => navigate("./..")}>
           {"<"} Back to contests
         </span>
-        <h2>{contest.data.name}</h2>
-        <p>{contest.data.text}</p>
+        <h2>{contest.data.title}</h2>
+        <p>{contest.data.description}</p>
         {user.data.isLoggedIn && !validation.data.joined && (
           <>
             <hr />
@@ -111,30 +111,36 @@ const ContestPage = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {contest.data.challenges.map((challenge, i) => (
-                        <tr
-                          className={style.tableRow}
-                          onClick={() =>
-                            navigate(`./${challenge.id.replaceAll("/", ":")}`)
-                          }
-                        >
-                          <td>{challenge.name}</td>
-                          <td>{challenge.submissions}</td>
-                          <td>{challenge.max_score}</td>
-                          <td
-                            className={`bg-${
-                              challenge.score && challenge.submissions
-                                ? styleScore(
-                                    challenge.score,
-                                    challenge.max_score
-                                  )
-                                : "body"
-                            }`}
-                          >
-                            {round2dp(challenge.score)}
-                          </td>
-                        </tr>
-                      ))}
+                      {contest.data.challenges.map(
+                        ({ challenge, submissions, max_score }, i) => {
+                          const score = Math.max(
+                            ...submissions.map((x) => x.score || 0)
+                          );
+                          return (
+                            <tr
+                              className={style.tableRow}
+                              onClick={() =>
+                                navigate(
+                                  `./${challenge.id.replaceAll("/", ":")}`
+                                )
+                              }
+                            >
+                              <td>{challenge.title}</td>
+                              <td>{submissions.length}</td>
+                              <td>{max_score}</td>
+                              <td
+                                className={`bg-${
+                                  submissions
+                                    ? styleScore(score, max_score)
+                                    : "body"
+                                }`}
+                              >
+                                {round2dp(score)}
+                              </td>
+                            </tr>
+                          );
+                        }
+                      )}
                     </tbody>
                   </Table>
                 </Container>
@@ -178,8 +184,8 @@ const ContestPage = () => {
                   ) : (
                     <p>
                       You{" "}
-                      {contest.data.ends === null ||
-                      Date.now() < contest.data.ends ||
+                      {contest.data.end_time === null ||
+                      new Date() < contest.data.end_time ||
                       showUnofficial
                         ? "are"
                         : "were"}{" "}
@@ -191,7 +197,10 @@ const ContestPage = () => {
                   showUnofficial={showUnofficial}
                   username={user.data.username}
                   leaderboard={sortedLeaderboard}
-                  challenges={contest.data.challenges}
+                  challenges={contest.data.challenges.map((x) => ({
+                    max_score: x.max_score,
+                    title: x.challenge.title,
+                  }))}
                 />
               </Container>
             </Tab>

@@ -23,11 +23,11 @@ export function round2dp(num: number | null) {
   return Math.round(num * 100) / 100;
 }
 
-export function prettyDate(date: number) {
+export function prettyDate(date: Date) {
   return format(date, "h:mmaa | EEEE do LLLL y");
 }
 
-export function prettyInterval(start: number, end: number) {
+export function prettyInterval(start: Date, end: Date) {
   const duration = intervalToDuration({ start: start, end: end });
   const order: (keyof Duration)[] = [
     "seconds",
@@ -89,17 +89,21 @@ export function assertAllQueriesSuccess<a, b>(
     throw errorCode
       ? error(errorCode)
       : new Error("Query success assertion failed.");
-  if (queries.find((x) => x.isFetching)) throw new LoadingMarker();
+  if (queries.find((x) => x.isFetching || x.isPlaceholderData))
+    throw new LoadingMarker();
 }
 
 export function retryUnlessForbidden(failureCount: number, error: unknown) {
   if (!(error instanceof TRPCClientError)) {
     return failureCount < 3;
   }
-
+  console.log(error);
   if (error.data.code === "FORBIDDEN") {
     return false;
   }
 
   return failureCount < 3;
 }
+
+export type ArrayElement<A> = A extends readonly (infer T)[] ? T : never;
+// https://stackoverflow.com/questions/41253310/typescript-retrieve-element-type-information-from-array-type#

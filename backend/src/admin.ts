@@ -1,7 +1,6 @@
 import { prisma } from "./server";
 import { TRPCError } from "@trpc/server";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
-import { publicProcedure, router } from "./trpc";
+import { router } from "./trpc";
 import { z } from "zod";
 import {
   ChallengeSchema,

@@ -1,8 +1,8 @@
 import { prettyDate, prettyInterval } from "utils/helper";
 
 const TimeDisplay = (props: {
-  displayDate: number | null;
-  refDate: number;
+  displayDate: Date | null;
+  refDate: Date;
   nullStr: string;
   pastStr: string;
 }) => {

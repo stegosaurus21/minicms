@@ -6,7 +6,7 @@ const ContestLeaderboard = (props: {
   showUnofficial: boolean;
   username?: string;
   leaderboard: RenderableLeaderboard[];
-  challenges: ContestChallengeExternal[];
+  challenges: { max_score: number; title: string }[];
 }) => {
   const { showUnofficial, username, leaderboard, challenges } = props;
   const total_score = challenges.reduce(
@@ -22,7 +22,7 @@ const ContestLeaderboard = (props: {
           <th>User</th>
           <th>{`Total score (/${total_score})`}</th>
           {challenges.map((c) => (
-            <th>{`${c.name} (/${c.max_score})`}</th>
+            <th>{`${c.title} (/${c.max_score})`}</th>
           ))}
         </tr>
       </thead>

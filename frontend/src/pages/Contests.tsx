@@ -9,11 +9,11 @@ import { error, handleError } from "components/Error";
 import { assertQuerySuccess } from "utils/helper";
 
 const Contests = () => {
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(new Date());
   const navigate = useNavigate();
 
   useEffect(() => {
-    const ticker = setInterval(() => setNow(Date.now()), 1000);
+    const ticker = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(ticker);
   }, []);
 
@@ -39,18 +39,18 @@ const Contests = () => {
               </tr>
             </thead>
             <tbody>
-              {contests.data.map((x: ContestMeta) => (
+              {contests.data.map((x) => (
                 <tr
                   className={style.tableRow}
                   onClick={() => {
                     navigate(`${x.id.replaceAll("/", ":")}`);
                   }}
                 >
-                  <td>{x.name}</td>
+                  <td>{x.title}</td>
                   <td>
                     <TimeDisplay
                       refDate={now}
-                      displayDate={x.starts}
+                      displayDate={x.start_time}
                       nullStr="Opened"
                       pastStr="Opened"
                     />
@@ -58,7 +58,7 @@ const Contests = () => {
                   <td>
                     <TimeDisplay
                       refDate={now}
-                      displayDate={x.ends}
+                      displayDate={x.end_time}
                       nullStr="Never"
                       pastStr="Already closed"
                     />

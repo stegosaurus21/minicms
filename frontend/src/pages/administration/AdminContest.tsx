@@ -63,17 +63,17 @@ export const AdminContest = () => {
           <Form.Label>Contest ID</Form.Label>
           <Form.Control required type="text" {...register("id")} />
           <Form.Label>Contest name</Form.Label>
-          <Form.Control required type="text" {...register("name")} />
+          <Form.Control required type="text" {...register("title")} />
           <Form.Label>Contest start</Form.Label>
           <DateTimeControl
             control={control}
-            field="starts"
+            field="start_time"
             getValues={getValues}
           />
           <Form.Label>Contest ends</Form.Label>
           <DateTimeControl
             control={control}
-            field="ends"
+            field="end_time"
             getValues={getValues}
           />
           <br />

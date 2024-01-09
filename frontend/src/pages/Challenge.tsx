@@ -5,7 +5,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import { assertQuerySuccess, round2dp, styleScore } from "utils/helper";
+import {
+  assertQuerySuccess,
+  parseMemory,
+  round2dp,
+  styleScore,
+} from "utils/helper";
 import style from "../styles.module.css";
 import "katex/dist/katex.min.css";
 import FormCheckInput from "react-bootstrap/esm/FormCheckInput";
@@ -50,7 +55,7 @@ const Challenge = () => {
     { contest: queryContestName, challenge: queryChallengeName },
     { enabled: queryContestName !== "" && queryChallengeName !== "" }
   );
-  const challenge = trpc.challenge.get.useQuery(
+  const challengeQuery = trpc.challenge.get.useQuery(
     { contest: queryContestName, challenge: queryChallengeName },
     { enabled: validation.isSuccess && validation.data.isViewable }
   );
@@ -62,7 +67,7 @@ const Challenge = () => {
   try {
     assertQuerySuccess(user, "ERR_AUTH");
     assertQuerySuccess(validation, "ERR_CHAL_404");
-    assertQuerySuccess(challenge, "ERR_CHAL_FETCH");
+    assertQuerySuccess(challengeQuery, "ERR_CHAL_FETCH");
     assertQuerySuccess(results, "ERR_RESULTS_FETCH");
     assertQuerySuccess(languages, "ERR_LANG_FETCH");
   } catch (e) {
@@ -89,6 +94,7 @@ const Challenge = () => {
 
   const pastSubmissions = results.data.submissions;
   const score = results.data.score;
+  const { challenge, max_score } = challengeQuery.data;
 
   return (
     <>
@@ -96,24 +102,23 @@ const Challenge = () => {
         <span className={style.returnLink} onClick={() => navigate("./..")}>
           {"<"} Back to contest
         </span>
-        <ReactMarkdown
-          components={{
-            h1: (node, ...props) => (
-              <h1>
-                {node.children[0]}{" "}
-                <Badge
-                  bg={
-                    pastSubmissions === null || pastSubmissions.length === 0
-                      ? "secondary"
-                      : styleScore(score, challenge.data.max_score)
-                  }
-                >{`${round2dp(score)}/${challenge.data.max_score}`}</Badge>
-              </h1>
-            ),
-          }}
-        >
-          {challenge.data.description.header}
-        </ReactMarkdown>
+        <h1>
+          {challenge.title}{" "}
+          <Badge
+            bg={
+              pastSubmissions === null || pastSubmissions.length === 0
+                ? "secondary"
+                : styleScore(score, max_score)
+            }
+          >{`${round2dp(score)}/${max_score}`}</Badge>
+        </h1>
+        <p>
+          <strong>{`Time limit: ${challenge.time_limit}`}</strong>
+          <br />
+          <strong>{`Memory limit: ${parseMemory(
+            challenge.memory_limit
+          )}`}</strong>
+        </p>
         {
           <div className="border w-75 p-2 mb-3">
             <Form noValidate validated={validated} className="p-2">
@@ -163,7 +168,11 @@ const Challenge = () => {
             ),
           }}
         >
-          {challenge.data.description.body}
+          {challenge.description +
+            "\n\n## Input\n\n" +
+            challenge.input_format +
+            "\n\n## Output\n\n" +
+            challenge.output_format}
         </ReactMarkdown>
         {pastSubmissions !== null && (
           <>
@@ -177,7 +186,7 @@ const Challenge = () => {
             <span> Include unofficial submissions</span>
             <ChallengeSubmissions
               submissions={pastSubmissions}
-              max_score={challenge.data.max_score}
+              max_score={challengeQuery.data.max_score}
               showUnofficial={showUnofficial}
             />
           </>

@@ -1,4 +1,4 @@
-import createError, { HttpError } from "http-errors";
+import createError from "http-errors";
 import { AuthValidation, Session } from "./interface";
 import { v4 } from "uuid";
 import { prisma } from "./server";

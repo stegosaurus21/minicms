@@ -54,7 +54,7 @@ export interface RenderableLeaderboard {
 }
 
 export interface Submission {
-  time: number;
+  time: Date;
   token: string;
   score: number | null;
   index: number;

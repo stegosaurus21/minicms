@@ -9,10 +9,10 @@ import { useEffect, useState } from "react";
 
 export const AdminHome = () => {
   const navigate = useNavigate();
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(new Date());
 
   useEffect(() => {
-    const ticker = setInterval(() => setNow(Date.now()), 1000);
+    const ticker = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(ticker);
   }, []);
 
@@ -53,11 +53,11 @@ export const AdminHome = () => {
                     navigate(`${x.id.replaceAll("/", ":")}`);
                   }}
                 >
-                  <td>{x.name}</td>
+                  <td>{x.title}</td>
                   <td>
                     <TimeDisplay
                       refDate={now}
-                      displayDate={x.starts}
+                      displayDate={x.start_time}
                       nullStr="Opened"
                       pastStr="Opened"
                     />
@@ -65,7 +65,7 @@ export const AdminHome = () => {
                   <td>
                     <TimeDisplay
                       refDate={now}
-                      displayDate={x.ends}
+                      displayDate={x.end_time}
                       nullStr="Never"
                       pastStr="Already closed"
                     />

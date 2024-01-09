@@ -1,14 +1,8 @@
 import createError, { HttpError } from "http-errors";
 import { prisma } from "./server";
-import {
-  ContestChallenge,
-  LeaderboardEntry,
-  Resolve,
-  ResolveCounter,
-} from "./interface";
+import { LeaderboardEntry, Resolve, ResolveCounter } from "./interface";
 import { getContestInternal } from "./contest";
-import { getChallengeInternal, getChallengeResults } from "./challenge";
-import { readFile } from "fs/promises";
+import { getChallengeResults } from "./challenge";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { publicProcedure, router } from "./trpc";
 import { protectedProcedure } from "./auth";
@@ -45,10 +39,10 @@ export const resultsRouter = router({
   }),
 
   getTest: protectedResultsProcedure
-    .input(z.object({ test: z.number() }))
+    .input(z.object({ task: z.number(), test: z.number() }))
     .query(async ({ input, ctx }) => {
-      const { submission, test } = input;
-      return await getTest(submission, test);
+      const { submission, task, test } = input;
+      return await getTest(submission, task, test);
     }),
 
   getSubmission: protectedResultsProcedure
@@ -107,7 +101,7 @@ async function getSubmissionChallenge(submission: string): Promise<string> {
         select: { challenge: true },
         where: { token: submission },
       })
-    ).challenge;
+    ).challenge.challenge_id;
   } catch (err) {
     if (err instanceof PrismaClientKnownRequestError) {
       if (err.code === "P2025") {
@@ -118,19 +112,26 @@ async function getSubmissionChallenge(submission: string): Promise<string> {
   }
 }
 
-async function getTestInternal(submission: string, test_num: number) {
+async function getTestInternal(
+  submission: string,
+  task_number: number,
+  test_number: number
+) {
   return await prisma.result.findUniqueOrThrow({
     select: {
       token: true,
+      test_number: true,
+      task_number: true,
       time: true,
       memory: true,
       status: true,
       compile_output: true,
     },
     where: {
-      submission_token_test_num: {
+      submission_token_task_number_test_number: {
         submission_token: submission,
-        test_num: test_num,
+        test_number: test_number,
+        task_number: task_number,
       },
     },
   });
@@ -143,24 +144,20 @@ async function getTestInternal(submission: string, test_num: number) {
  * @param {number} test_num - the index of the test to get
  * @returns
  */
-export async function getTest(submission: string, test_num: number) {
-  const numTests = (
-    await getChallengeInternal(await getSubmissionChallenge(submission))
-  ).tests.length;
-
-  if (test_num < 0 || test_num >= numTests) {
-    throw createError(404, "Test not found.");
-  }
-
+export async function getTest(
+  submission: string,
+  task_number: number,
+  test_number: number
+) {
   try {
-    return await getTestInternal(submission, test_num);
+    return await getTestInternal(submission, task_number, test_number);
   } catch (e) {
     if (e instanceof PrismaClientKnownRequestError) {
       if (e.code === "P2025") {
         await new Promise((resolve, reject) => {
-          awaitTest.set(`${submission}/${test_num}`, resolve);
+          awaitTest.set(`${submission}/${task_number}/${test_number}`, resolve);
         });
-        return getTestInternal(submission, test_num);
+        return getTestInternal(submission, task_number, test_number);
       } else throw e;
     } else throw e;
   }
@@ -216,14 +213,33 @@ export async function getResult(submission: string): Promise<{
 export async function judgeCallback(
   body: any,
   submission: string,
-  test_num: number
+  task_number: number,
+  test_number: number
 ) {
+  const challenge = await getSubmissionChallenge(submission);
+
   await prisma.result.create({
     data: {
       submission: {
         connect: { token: submission },
       },
-      test_num: test_num,
+      task: {
+        connect: {
+          challenge_id_task_number: {
+            challenge_id: challenge,
+            task_number: task_number,
+          },
+        },
+      },
+      test: {
+        connect: {
+          challenge_id_task_number_test_number: {
+            challenge_id: challenge,
+            task_number: task_number,
+            test_number: test_number,
+          },
+        },
+      },
       token: body.token,
       time: parseFloat(body.time) || 0,
       memory: body.memory || 0,
@@ -235,7 +251,7 @@ export async function judgeCallback(
   });
 
   const waiter: Resolve | undefined = awaitTest.get(
-    `${submission}/${test_num}`
+    `${submission}/${task_number}/${test_number}`
   );
   if (waiter) {
     (waiter as Resolve)(true);
@@ -252,61 +268,48 @@ export async function judgeCallback(
 }
 
 export async function processResult(submission: string) {
-  const { challenge, contest } = await prisma.submission.findUniqueOrThrow({
-    select: { challenge: true, contest: true },
+  const submission_data = await prisma.submission.findUniqueOrThrow({
+    select: {
+      challenge: {
+        select: {
+          challenge: {
+            select: {
+              tasks: true,
+            },
+          },
+          max_score: true,
+        },
+      },
+      results: {
+        select: {
+          status: true,
+        },
+      },
+    },
     where: { token: submission },
   });
 
-  const challenge_config = await getChallengeInternal(challenge);
-  const files = challenge_config.tests;
+  const { challenge, max_score } = submission_data.challenge;
+  const { results } = submission_data;
 
-  let total_score;
-  let submission_score = 0;
-  if (challenge_config.scoring === undefined) {
-    total_score = files.length;
-    let results = await Promise.all(
-      files.map((_, i) => getTest(submission, i))
-    );
-    submission_score = results.filter(
-      (result) => result.status === "Accepted"
-    ).length;
-  } else {
-    const scoring = challenge_config.scoring;
-    total_score = scoring.reduce((sum, subtask) => sum + subtask.weight, 0);
-    for (const subtask of scoring) {
-      let results = await Promise.all(
-        subtask.tasks.map((t) =>
-          getTest(submission, files.map((f) => f.name).indexOf(t))
-        )
-      );
-      switch (subtask.mode) {
-        case "BATCH":
-          if (
-            results.find((result) => result.status !== "Accepted") === undefined
-          )
-            submission_score += subtask.weight;
-          break;
-        case "INDIVIDUAL":
-          submission_score +=
-            subtask.weight *
-            (results.filter((result) => result.status === "Accepted").length /
-              results.length);
-          break;
-      }
+  let total_weight = 0;
+  let submission_credit = 0;
+  challenge.tasks.forEach((task) => {
+    total_weight += task.weight;
+    switch (task.type) {
+      case "BATCH":
+        if (results.find((x) => x.status !== "Accepted") === undefined)
+          submission_credit += task.weight;
+        break;
+      case "INDIVIDUAL":
+        submission_credit +=
+          (task.weight *
+            results.filter((x) => x.status === "Accepted").length) /
+          results.length;
     }
-  }
+  });
 
-  const contest_config = await getContestInternal(contest);
-
-  let result = 0;
-  result = (
-    contest_config.challenges.find(
-      (x) => x.id === challenge
-    ) as ContestChallenge
-  ).max_score;
-
-  result *= submission_score;
-  result /= total_score;
+  const result = (max_score * submission_credit) / total_weight;
 
   await prisma.submission.update({
     data: { score: result },
@@ -314,17 +317,14 @@ export async function processResult(submission: string) {
   });
 
   const waiter: Resolve | undefined = awaitResult.get(submission);
-  if (waiter) {
-    (waiter as Resolve)(true);
-  }
+  if (waiter) (waiter as Resolve)(true);
 }
 
 export async function getLeaderboard(contest: string) {
-  const contest_config = await getContestInternal(contest);
-  const contest_end = contest_config.ends
-    ? new Date(contest_config.ends)
-    : null;
-  const challenges = (await getContestInternal(contest)).challenges;
+  const contest_end = (await getContestInternal(contest)).end_time;
+  const challenges = (await getContestInternal(contest)).challenges.map(
+    (x) => x.challenge
+  );
   const challenge_map = challenges.reduce(
     (prev, next, i) => prev.set(next.id, i),
     new Map<string, number>()
@@ -332,7 +332,7 @@ export async function getLeaderboard(contest: string) {
 
   const participants = await prisma.participant.findMany({
     select: { user: { select: { username: true, id: true } }, time: true },
-    where: { contest: contest },
+    where: { contest_id: contest },
   });
   const participant_map = participants.reduce(
     (prev, next) => prev.set(next.user.id, next.user.username),
@@ -360,42 +360,41 @@ export async function getLeaderboard(contest: string) {
 
   (
     await prisma.submission.groupBy({
-      by: ["owner_id", "challenge"],
+      by: ["owner_id", "challenge_id"],
       where: {
-        contest: contest,
+        contest_id: contest,
       },
       _max: { score: true },
       _count: true,
     })
   ).forEach((item) => {
-    if (!challenge_map.has(item.challenge)) return;
+    if (!challenge_map.has(item.challenge_id)) return;
     all[participant_map.get(item.owner_id) as string].results[
-      challenge_map.get(item.challenge) as number
+      challenge_map.get(item.challenge_id) as number
     ] = { score: item._max.score || 0, count: item._count };
   });
 
   if (contest_end) {
     (
       await prisma.submission.groupBy({
-        by: ["owner_id", "challenge"],
+        by: ["owner_id", "challenge_id"],
         where: {
-          contest: contest,
+          contest_id: contest,
           time: { lt: contest_end },
         },
         _max: { score: true },
         _count: true,
       })
     ).forEach((item) => {
-      if (!challenge_map.has(item.challenge)) return;
+      if (!challenge_map.has(item.challenge_id)) return;
       official[participant_map.get(item.owner_id) as string].results[
-        challenge_map.get(item.challenge) as number
+        challenge_map.get(item.challenge_id) as number
       ] = { score: item._max.score || 0, count: item._count };
     });
   }
-
   return {
     all: all,
-    official: official,
+    official: contest_end ? official : all,
   };
 }
 

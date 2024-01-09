@@ -10,12 +10,10 @@ import {
   judgeSecret,
   prisma,
 } from "./server";
-import config from "../config.json";
 import fetch from "node-fetch";
 import { awaitScoring, processResult } from "./results";
 import { getChallengeInternal } from "./challenge";
 import { SubmitReturn } from "./interface";
-import { getContestInternal } from "./contest";
 
 export async function submit(
   src: string,
@@ -24,30 +22,9 @@ export async function submit(
   challenge: string,
   language_id: number
 ): Promise<SubmitReturn> {
-  if (!challenge) {
-    throw createError(400, "No challenge specified.");
-  }
-
-  if (language_id === undefined || language_id === null) {
-    throw createError(400, "No language specified.");
-  }
-  if (config.disabled_languages.includes(language_id)) {
-    throw createError(400, "This language is disabled.");
-  }
-  const challenge_dir = `./challenges/${challenge}`;
-  try {
-    await access(challenge_dir, fs.constants.F_OK);
-  } catch (err) {
-    throw createError(400, "No such challenge.");
-  }
-
-  const contest_config = await getContestInternal(contest);
-  if (!contest_config.challenges.map((x) => x.id).includes(challenge)) {
-    throw createError(400, "Challenge not in contest.");
-  }
-
-  const challenge_config = await getChallengeInternal(challenge);
-  const challenge_config_exists = challenge_config !== undefined;
+  const { tasks, time_limit, memory_limit } = await getChallengeInternal(
+    challenge
+  );
 
   let submission: string;
   try {
@@ -57,8 +34,14 @@ export async function submit(
         owner: {
           connect: { id: owner },
         },
-        contest: contest,
-        challenge: challenge,
+        challenge: {
+          connect: {
+            challenge_id_contest_id: {
+              challenge_id: challenge,
+              contest_id: contest,
+            },
+          },
+        },
         src: src,
         score: null,
         token: submission,
@@ -69,56 +52,43 @@ export async function submit(
     throw createError(500, `Upload error: ${(err as Error).message}`);
   }
 
+  const totalTests = tasks.reduce((p, n) => p + n.tests.length, 0);
   let resultPromise: Promise<boolean>;
   try {
-    const tests = challenge_config.tests;
-
     resultPromise = new Promise<boolean>((resolve, reject) => {
-      awaitScoring.set(submission, { counter: tests.length, resolve: resolve });
+      awaitScoring.set(submission, { counter: totalTests, resolve: resolve });
     }).then(() => {
       processResult(submission);
       return true;
     });
 
-    const IOs = await Promise.all(
-      tests
-        .map((file) =>
-          readFile(`${challenge_dir}/in/${file.name}`, { encoding: "utf8" })
-        )
-        .concat(
-          tests.map((file) =>
-            readFile(`${challenge_dir}/out/${file.name}`, { encoding: "utf8" })
+    const responses = await Promise.all(
+      tasks.map((task) =>
+        Promise.all(
+          task.tests.map((test) =>
+            fetch(`http://${JUDGE_URL}:${JUDGE_PORT}/submissions`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                source_code: src,
+                language_id: language_id,
+                stdin: test.input,
+                expected_output: test.output,
+                cpu_time_limit: time_limit,
+                memory_limit: memory_limit,
+                callback_url: `http://${BACKEND_URL}:${BACKEND_PORT}/callback/${judgeSecret}/${submission}/${
+                  task.task_number
+                }/${test.test_number}/${Date.now()}`,
+              }),
+            })
           )
         )
-    );
-
-    const inputs = IOs.slice(0, tests.length);
-    const outputs = IOs.slice(tests.length, IOs.length);
-    const responses = await Promise.all(
-      inputs.map((input, i) =>
-        fetch(`http://${JUDGE_URL}:${JUDGE_PORT}/submissions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            source_code: src,
-            language_id: language_id,
-            stdin: input,
-            expected_output: outputs[i],
-            cpu_time_limit: challenge_config_exists
-              ? challenge_config.time_limit || config.time_limit
-              : config.time_limit,
-            memory_limit: challenge_config_exists
-              ? challenge_config.memory_limit || config.memory_limit
-              : config.memory_limit,
-            callback_url: `http://${
-              BACKEND_URL === "0.0.0.0" ? "host.docker.internal" : BACKEND_URL
-            }:${BACKEND_PORT}/callback/${judgeSecret}/${submission}/${i}/${Date.now()}`,
-          }),
-        })
       )
     );
 
-    const failedSubmission = responses.find((response) => !response.ok);
+    const failedSubmission = responses
+      .flatMap((x) => x)
+      .find((response) => !response.ok);
     let errMessage = "Submission error: ";
     if (failedSubmission) {
       const failureReasons = await failedSubmission.json();

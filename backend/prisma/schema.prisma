@@ -27,87 +27,104 @@ model User {
 }
 
 model Submission {
-  token     String   @id
-  owner     User     @relation(fields: [owner_id], references: [id])
-  owner_id  Int
-  src       String
-  contest   String
-  challenge String
-  score     Int?
-  time      DateTime
-  results   Result[]
+  token        String           @id
+  owner        User             @relation(fields: [owner_id], references: [id])
+  challenge    ContestChallenge @relation(fields: [challenge_id, contest_id], references: [challenge_id, contest_id])
+  owner_id     Int
+  src          String
+  contest_id   String
+  challenge_id String
+  score        Int?
+  time         DateTime
+  results      Result[]
 }
 
 model Result {
   submission       Submission @relation(fields: [submission_token], references: [token])
   submission_token String
-  test_num         Int
+  challenge_id     String
+  task             Task       @relation(fields: [challenge_id, task_number], references: [challenge_id, task_number])
+  task_number      Int
+  test             Test       @relation(fields: [challenge_id, task_number, test_number], references: [challenge_id, task_number, test_number])
+  test_number      Int
   token            String
   time             Float
   memory           Int
   status           String
   compile_output   String
 
-  @@id([submission_token, test_num])
+  @@id([submission_token, task_number, test_number])
 }
 
 model Participant {
-  user    User     @relation(fields: [user_id], references: [id])
-  user_id Int
-  contest String
-  time    DateTime
+  user       User     @relation(fields: [user_id], references: [id])
+  contest    Contest  @relation(fields: [contest_id], references: [id])
+  user_id    Int
+  contest_id String
+  time       DateTime
 
-  @@id([user_id, contest])
+  @@id([user_id, contest_id])
 }
 
 model Contest {
-  name        String             @id
-  start_time  DateTime
-  end_time    DateTime
-  challenges  ContestChallenge[]
-  description String
+  id           String             @id
+  title        String
+  start_time   DateTime?
+  end_time     DateTime?
+  challenges   ContestChallenge[]
+  participants Participant[]
+  description  String
 }
 
 model ContestChallenge {
-  challenge      Challenge @relation(fields: [challenge_name], references: [name])
-  challenge_name String
-  contest        Contest   @relation(fields: [contest_name], references: [name])
-  contest_name   String
-  max_score      Int
+  challenge    Challenge    @relation(fields: [challenge_id], references: [id])
+  challenge_id String
+  contest      Contest      @relation(fields: [contest_id], references: [id])
+  contest_id   String
+  max_score    Int
+  submissions  Submission[]
 
-  @@id([challenge_name, contest_name])
+  @@id([challenge_id, contest_id])
 }
 
 model Challenge {
-  name          String             @id
-  type          String             @default("SIMPLE_IO")
+  id            String             @id
+  title         String
+  type          String
   tasks         Task[]
   contests      ContestChallenge[]
-  description   String?
-  input_format  String?
-  output_format String?
-  scoring       String?
+  description   String
+  input_format  String
+  output_format String
+  time_limit    Int
+  memory_limit  Int
   tests         Test[]
 }
 
 model Task {
-  challenge      Challenge @relation(fields: [challenge_name], references: [name])
-  challenge_name String
-  task_number    Int
-  weight         Int       @default(1)
-  is_example     Boolean   @default(false)
-  tasks          Test[]
+  challenge    Challenge @relation(fields: [challenge_id], references: [id])
+  challenge_id String
+  type         String
+  task_number  Int
+  weight       Int
+  tests        Test[]
+  Result       Result[]
 
-  @@id([challenge_name, task_number])
+  @@id([challenge_id, task_number])
 }
 
 model Test {
-  task           Task      @relation(fields: [challenge_name, task_number], references: [challenge_name, task_number])
-  challenge      Challenge @relation(fields: [challenge_name], references: [name])
-  challenge_name String
-  task_number    Int
-  input          String
-  output         String
+  task         Task      @relation(fields: [challenge_id, task_number], references: [challenge_id, task_number])
+  challenge    Challenge @relation(fields: [challenge_id], references: [id])
+  test_number  Int
+  is_example   Boolean
+  challenge_id String
+  task_number  Int
+  comment      String
+  explanation  String
+  input        String
+  output       String
+  Result       Result[]
 
-  @@id([challenge_name, task_number, input])
+  @@id([challenge_id, task_number, test_number])
 }
