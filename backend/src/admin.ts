@@ -27,13 +27,26 @@ const adminProcedure = protectedProcedure.use(async ({ next, ctx }) => {
 });
 
 export const adminRouter = router({
+  createContest: adminProcedure
+    .input(z.object({ id: z.string(), title: z.string() }))
+    .mutation(async ({ input }) => {
+      const { id, title } = input;
+      await prisma.contest.create({
+        data: {
+          id: id,
+          title: title,
+          description: "",
+        },
+      });
+    }),
+
   updateContest: adminProcedure
     .input(
       z.object({ target: ContestWhereUniqueInputSchema, data: ContestSchema })
     )
     .mutation(async ({ input }) => {
       const { target, data } = input;
-      prisma.contest.update({
+      await prisma.contest.update({
         where: target,
         data: data,
       });
@@ -48,7 +61,7 @@ export const adminRouter = router({
     )
     .mutation(async ({ input }) => {
       const { target, data } = input;
-      prisma.challenge.update({
+      await prisma.challenge.update({
         where: target,
         data: data,
       });
@@ -63,7 +76,7 @@ export const adminRouter = router({
     )
     .mutation(async ({ input }) => {
       const { target, data } = input;
-      prisma.task.update({
+      await prisma.task.update({
         where: target,
         data: data,
       });
@@ -78,7 +91,7 @@ export const adminRouter = router({
     )
     .mutation(async ({ input }) => {
       const { target, data } = input;
-      prisma.test.update({
+      await prisma.test.update({
         where: target,
         data: data,
       });

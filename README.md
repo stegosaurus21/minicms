@@ -20,15 +20,16 @@ A simple contest management system powered by Judge0.
 
 ## TODO
 
-- Admin console
+- (In progress) Admin console
   - Rejudging
-- Migrate problems to DB?
+- (In progress) Migrate problems to DB
 - Better token handling
 - Better logging
 - Fix tests D:
-- Bundle with Judge0?
+- Bundle with Judge0
 - Frontend and backend really should be separate images
 - Profile page
 - Leaderboard memoization
 - Error boundaries
 - Replace HTTP errors with TRPC errors
+- Refactor other forms with react-hook-form

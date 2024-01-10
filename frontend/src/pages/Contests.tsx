@@ -29,6 +29,9 @@ const Contests = () => {
     <>
       <Container>
         <h1>Contests</h1>
+        {contests.data.length === 0 && (
+          <p>There are no available contests yet.</p>
+        )}
         {contests.data.length !== 0 && (
           <Table bordered className="w-75">
             <thead>

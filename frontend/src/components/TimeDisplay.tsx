@@ -20,7 +20,7 @@ const TimeDisplay = (props: {
     <>
       <span>{prettyInterval(refDate, displayDate)}</span>
       <br />
-      <span>{prettyDate(refDate)}</span>
+      <span>{prettyDate(displayDate)}</span>
     </>
   );
 };

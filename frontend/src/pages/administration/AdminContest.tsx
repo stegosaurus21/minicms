@@ -1,56 +1,65 @@
 import { useState } from "react";
 import { Button, Col, Container, Form, Row } from "react-bootstrap";
 import { Controller, useForm } from "react-hook-form";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import ErrorPage, { error, handleError } from "~components/Error";
 import { assertQuerySuccess } from "~utils/helper";
 import { trpc } from "~utils/trpc";
 import { inferRouterOutputs } from "@trpc/server";
 import { AppRouter } from "../../../../backend/src/app";
-import parse from "date-fns/parse";
-import format from "date-fns/format";
+import style from "../../styles.module.css";
 import { DateTimeControl } from "~components/Administration/DateTimeControl";
 
 type ContestData = inferRouterOutputs<AppRouter>["contest"]["get"];
 
 export const AdminContest = () => {
   const params = useParams();
+  const navigate = useNavigate();
 
   if (!params["contest"]) throw error("ERR_CONTEST_MISSING");
-  const queryContestName = params["contest"].replace(":", "/");
+  const paramContestId = params["contest"].replace(":", "/");
 
-  const user = trpc.auth.validate.useQuery();
-  const authorization = trpc.auth.isAdmin.useQuery(undefined, {
-    enabled: user.isSuccess && user.data.isLoggedIn,
+  const queryUser = trpc.auth.validate.useQuery();
+  const queryAuthorization = trpc.auth.isAdmin.useQuery(undefined, {
+    enabled: queryUser.isSuccess && queryUser.data.isLoggedIn,
   });
-  const contest = trpc.contest.get.useQuery(
-    { contest: queryContestName },
-    { enabled: authorization.isSuccess, staleTime: Infinity }
+  const queryContest = trpc.contest.get.useQuery(
+    { contest: paramContestId },
+    { enabled: queryAuthorization.isSuccess, staleTime: Infinity }
   );
+  const mutateContest = trpc.admin.updateContest.useMutation();
 
   const { control, register, getValues, handleSubmit } = useForm<ContestData>({
-    values: contest.data,
+    values: queryContest.data,
     resetOptions: {
       keepDirtyValues: true,
       keepErrors: true,
     },
   });
 
-  function submitForm(data: ContestData) {
-    console.log(data);
+  async function submitForm(data: ContestData) {
+    try {
+      await mutateContest.mutateAsync({
+        target: { id: paramContestId },
+        data: data,
+      });
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   try {
-    assertQuerySuccess(user, "ERR_AUTH");
+    assertQuerySuccess(queryUser, "ERR_AUTH");
   } catch (e) {
     return handleError(e);
   }
 
-  if (!user.data.isLoggedIn) return <ErrorPage messageId="ERR_NOT_ADMIN" />;
+  if (!queryUser.data.isLoggedIn)
+    return <ErrorPage messageId="ERR_NOT_ADMIN" />;
 
   try {
-    assertQuerySuccess(authorization, "ERR_NOT_ADMIN");
-    assertQuerySuccess(contest, "ERR_CONTEST_FETCH");
+    assertQuerySuccess(queryAuthorization, "ERR_NOT_ADMIN");
+    assertQuerySuccess(queryContest, "ERR_CONTEST_FETCH");
   } catch (e) {
     return handleError(e);
   }
@@ -58,6 +67,9 @@ export const AdminContest = () => {
   return (
     <>
       <Container>
+        <span className={style.returnLink} onClick={() => navigate("./..")}>
+          {"<"} Back to contests
+        </span>
         <h1>Edit contest</h1>
         <Form onSubmit={handleSubmit(submitForm)}>
           <Form.Label>Contest ID</Form.Label>

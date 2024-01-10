@@ -69,7 +69,9 @@ const Login = () => {
       >
         <Modal.Header>
           <Modal.Title>Reset password</Modal.Title>
-          <Modal.Body>Please change your password to continue.</Modal.Body>
+        </Modal.Header>
+        <Modal.Body>
+          <p>Please change your password to continue.</p>
           <Form>
             <Form.Group>
               <Form.Label>Password</Form.Label>
@@ -121,7 +123,7 @@ const Login = () => {
               Submit
             </Button>
           </Form>
-        </Modal.Header>
+        </Modal.Body>
       </Modal>
 
       <Form className="w-75">

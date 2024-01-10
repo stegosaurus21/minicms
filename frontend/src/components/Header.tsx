@@ -15,35 +15,19 @@ const Header = () => {
   const logout = trpc.auth.logout.useMutation();
 
   return (
-    <Navbar sticky="top" bg="light" expand="lg">
+    <Navbar bg="light">
       <Container>
-        <Navbar.Brand
-          as="span"
-          style={{ cursor: "pointer" }}
-          onClick={() => navigate("/")}
-        >
-          MiniCMS
-        </Navbar.Brand>
+        <Navbar.Brand onClick={() => navigate("/")}>MiniCMS</Navbar.Brand>
         <Nav className="me-auto">
           <Nav.Link
-            as="span"
-            style={{ cursor: "pointer" }}
             onClick={() => navigate("/admin")}
             hidden={!admin.isSuccess || !admin.data}
           >
             Administration
           </Nav.Link>
 
+          <Nav.Link onClick={() => navigate("/contests")}>Contests</Nav.Link>
           <Nav.Link
-            as="span"
-            style={{ cursor: "pointer" }}
-            onClick={() => navigate("/contests")}
-          >
-            Contests
-          </Nav.Link>
-          <Nav.Link
-            as="span"
-            style={{ cursor: "pointer" }}
             onClick={() =>
               user.isSuccess && !user.data.isLoggedIn
                 ? navigate("/auth/login")
