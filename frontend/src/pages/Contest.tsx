@@ -114,6 +114,7 @@ const ContestPage = () => {
                       {contest.data.challenges.map(
                         ({ challenge, submissions, max_score }, i) => {
                           const score = Math.max(
+                            0,
                             ...submissions.map((x) => x.score || 0)
                           );
                           return (
@@ -130,7 +131,7 @@ const ContestPage = () => {
                               <td>{max_score}</td>
                               <td
                                 className={`bg-${
-                                  submissions
+                                  submissions.length > 0
                                     ? styleScore(score, max_score)
                                     : "body"
                                 }`}

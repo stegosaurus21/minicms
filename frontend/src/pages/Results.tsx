@@ -22,8 +22,13 @@ import {
 } from "utils/helper";
 import style from "../styles.module.css";
 import { Buffer } from "buffer";
-import { trpc } from "utils/trpc";
+import { trpc, trpcVanilla } from "utils/trpc";
 import { error, handleError } from "components/Error";
+import { useEffect, useState } from "react";
+import { inferRouterOutputs } from "@trpc/server";
+import { AppRouter } from "../../../backend/src/app";
+
+type TestResult = inferRouterOutputs<AppRouter>["results"]["getTest"];
 
 const Results = () => {
   const navigate = useNavigate();
@@ -62,31 +67,50 @@ const Results = () => {
     },
     { trpc: { context: { skipBatch: true } } }
   );
-  const queryResults = trpc.useQueries((t) => {
-    const tests = queryChallenge.data?.challenge.tests || [];
-    return tests.map((x) =>
-      t.results.getTest(
-        {
-          submission: paramSubmissionName,
-          task: x.task_number,
-          test: x.test_number,
-        },
-        {
-          enabled: queryChallenge.isSuccess,
-          placeholderData: {
-            token: "",
-            task_number: x.task_number,
-            test_number: x.test_number,
-            time: 0,
-            memory: 0,
-            status: "Judging",
-            compile_output: "",
-          },
-        }
-      )
-    );
-  });
 
+  const [results, setResults] = useState<Map<number, Map<number, TestResult>>>(
+    new Map()
+  );
+  const [compileOutput, setCompileOutput] = useState<string>("");
+
+  useEffect(() => {
+    if (!queryChallenge.isSuccess) return;
+
+    const newMap = new Map<number, Map<number, TestResult>>();
+    queryChallenge.data.challenge.tasks.forEach((task) => {
+      newMap.set(task.task_number, new Map<number, TestResult>());
+      task.tests.forEach((test) =>
+        newMap.get(test.test_number)?.set(test.test_number, {
+          task_number: task.task_number,
+          test_number: test.test_number,
+          token: "",
+          time: 0,
+          memory: 0,
+          status: "Judging",
+          compile_output: "",
+        })
+      );
+    });
+
+    setResults(newMap);
+
+    queryChallenge.data.challenge.tasks.forEach((task) =>
+      task.tests.forEach(async (test) => {
+        const result = await trpcVanilla.results.getTest.query({
+          submission: paramSubmissionName,
+          task: task.task_number,
+          test: test.test_number,
+        });
+        if (compileOutput === "") setCompileOutput(result.compile_output);
+        setResults((old) => {
+          old.get(task.task_number)?.set(test.test_number, result);
+          return old;
+        });
+      })
+    );
+  }, [queryChallenge.isSuccess]);
+  console.log(queryChallenge.data);
+  console.log(results);
   try {
     assertQuerySuccess(queryUser, "ERR_AUTH");
   } catch (e) {
@@ -130,31 +154,26 @@ const Results = () => {
   }
 
   function subtaskScore(task: ArrayElement<typeof tasks>) {
-    const queryTaskTests = queryResults.filter(
-      (x) => x.data?.task_number === task.task_number
+    const taskResults = Array.from(
+      results.get(task.task_number)?.values() || []
     );
 
-    try {
-      assertAllQueriesSuccess(queryTaskTests);
-    } catch (e) {
-      if (e instanceof LoadingMarker) {
-        return null;
-      } else {
-        throw e;
-      }
-    }
+    if (
+      taskResults.find((x) => x.status === "Judging") ||
+      taskResults.length == 0
+    )
+      return null;
 
-    const acceptedTasks = queryTaskTests.filter(
-      (x) => x.data.status === "Accepted"
+    const acceptedTasks = taskResults.filter(
+      (x) => x.status === "Accepted"
     ).length;
     switch (task.type) {
       case "BATCH":
-        if (acceptedTasks === queryTaskTests.length)
-          return subtaskMaxScore(task);
+        if (acceptedTasks === taskResults.length) return subtaskMaxScore(task);
         return 0;
 
       case "INDIVIDUAL":
-        return (subtaskMaxScore(task) * acceptedTasks) / queryTaskTests.length;
+        return (subtaskMaxScore(task) * acceptedTasks) / taskResults.length;
 
       default:
         return null;
@@ -185,109 +204,105 @@ const Results = () => {
         alwaysOpen
         defaultActiveKey={tasks.map((x) => `${x.task_number + 1}`)}
       >
-        {tasks.map((task) => (
-          <Accordion.Item eventKey={`${task.task_number + 1}`}>
-            <Accordion.Header>
-              <h5>
-                {tasks.length > 1 ? `Subtask ${task.task_number + 1}` : "Tests"}
-                <span> </span>
-                {task.type === "BATCH" ? (
-                  <OverlayTrigger
-                    trigger="hover"
-                    placement="top"
-                    overlay={
-                      <Popover>
-                        <Popover.Header>Batch subtask</Popover.Header>
-                        <Popover.Body>
-                          Batch subtasks require all tests to be accepted for
-                          the submission, otherwise the subtask is worth zero
-                          points.
-                        </Popover.Body>
-                      </Popover>
-                    }
-                  >
-                    <Badge className="bg-secondary text-light">Batch</Badge>
-                  </OverlayTrigger>
-                ) : (
-                  <></>
-                )}
-                <span> </span>
-                {subtaskScore(task) !== null ? (
-                  <Badge
-                    bg={styleScore(subtaskScore(task), subtaskMaxScore(task))}
-                  >{`${round2dp(subtaskScore(task))}/${subtaskMaxScore(
-                    task
-                  )}`}</Badge>
-                ) : (
-                  <Spinner as="span" size="sm" animation="border"></Spinner>
-                )}
-              </h5>
-            </Accordion.Header>
-            <Accordion.Body>
-              <Table bordered>
-                <thead>
-                  <tr>
-                    <th>Test number</th>
-                    <th>Runtime</th>
-                    <th>Memory used</th>
-                    <th>Result</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {queryResults
-                    .filter((x) => x.data?.task_number === task.task_number)
-                    .map((result, j) => {
-                      return (
-                        <tr>
-                          <td>{`${j + 1}`}</td>
-                          <td>{`${
-                            result.isSuccess
-                              ? `${result.data.time || ""} s`
-                              : ""
-                          }`}</td>
-                          <td>{`${
-                            result.isSuccess
-                              ? parseMemory(result.data.memory) || ""
-                              : ""
-                          }`}</td>
-                          <td
-                            className={`bg-${styleStatus(
-                              result.isSuccess ? result.data.status : "Judging"
-                            )}`}
-                          >
-                            {result.isSuccess ? (
-                              result.data.status
-                            ) : (
-                              <>
-                                <Spinner
-                                  as="span"
-                                  size="sm"
-                                  animation="border"
-                                ></Spinner>{" "}
-                                Judging
-                              </>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </Table>
-            </Accordion.Body>
-          </Accordion.Item>
-        ))}
+        {tasks
+          .toSorted((a, b) => a.task_number - b.task_number)
+          .map((task) => (
+            <Accordion.Item eventKey={`${task.task_number + 1}`}>
+              <Accordion.Header>
+                <h5>
+                  {tasks.length > 1
+                    ? `Subtask ${task.task_number + 1}`
+                    : "Tests"}
+                  <span> </span>
+                  {task.type === "BATCH" ? (
+                    <OverlayTrigger
+                      trigger="hover"
+                      placement="top"
+                      overlay={
+                        <Popover>
+                          <Popover.Header>Batch subtask</Popover.Header>
+                          <Popover.Body>
+                            Batch subtasks require all tests to be accepted for
+                            the submission, otherwise the subtask is worth zero
+                            points.
+                          </Popover.Body>
+                        </Popover>
+                      }
+                    >
+                      <Badge className="bg-secondary text-light">Batch</Badge>
+                    </OverlayTrigger>
+                  ) : (
+                    <></>
+                  )}
+                  <span> </span>
+                  {subtaskScore(task) !== null ? (
+                    <Badge
+                      bg={styleScore(subtaskScore(task), subtaskMaxScore(task))}
+                    >{`${round2dp(subtaskScore(task))}/${subtaskMaxScore(
+                      task
+                    )}`}</Badge>
+                  ) : (
+                    <Spinner as="span" size="sm" animation="border"></Spinner>
+                  )}
+                </h5>
+              </Accordion.Header>
+              <Accordion.Body>
+                <Table bordered>
+                  <thead>
+                    <tr>
+                      <th>Test number</th>
+                      <th>Runtime</th>
+                      <th>Memory used</th>
+                      <th>Result</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from(results.get(task.task_number)?.values() || [])
+                      .toSorted((a, b) => a.test_number - b.test_number)
+                      .map((result) => {
+                        return (
+                          <tr>
+                            <td>{`${result.test_number + 1}`}</td>
+                            <td>{`${
+                              result.status ? `${result.time || ""} s` : ""
+                            }`}</td>
+                            <td>{`${
+                              result.status
+                                ? parseMemory(result.memory) || ""
+                                : ""
+                            }`}</td>
+                            <td
+                              className={`bg-${styleStatus(
+                                result.status || "Judging"
+                              )}`}
+                            >
+                              {result.status ? (
+                                result.status
+                              ) : (
+                                <>
+                                  <Spinner
+                                    as="span"
+                                    size="sm"
+                                    animation="border"
+                                  ></Spinner>{" "}
+                                  Judging
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </Table>
+              </Accordion.Body>
+            </Accordion.Item>
+          ))}
       </Accordion>
       <h2 className="mt-3">Compilation output</h2>
       <Container className="border mt-3 p-2">
-        {queryResults[0].isSuccess &&
-        queryResults[0].data.compile_output !== "" ? (
+        {compileOutput ? (
           <pre>
-            <samp>
-              {Buffer.from(
-                queryResults[0].data.compile_output,
-                "base64"
-              ).toString()}
-            </samp>
+            <samp>{Buffer.from(compileOutput, "base64").toString()}</samp>
           </pre>
         ) : (
           <>

@@ -12,7 +12,7 @@
   "license": "MIT",
   "dependencies": {
     "@tanstack/react-query": "^4.32.6",
-    "@trpc/client": "^10.44.1",
+    "@trpc/client": "^10.45.0",
     "@trpc/react-query": "^10.37.1",
     "@trpc/server": "^10.45.0",
     "bootstrap": "^5.2.3",
@@ -20,6 +20,7 @@
     "date-fns": "^2.29.3",
     "react": "^18.2.0",
     "react-bootstrap": "^2.7.0",
+    "react-bootstrap-typeahead": "^6.3.2",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.49.2",
     "react-markdown": "^8.0.4",

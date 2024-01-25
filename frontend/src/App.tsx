@@ -10,16 +10,17 @@ import Challenge from "./pages/Challenge";
 import Results from "./pages/Results";
 import { Breadcrumb, Container } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
+import "react-bootstrap-typeahead/css/Typeahead.css";
 import style from "./styles.module.css";
 import { httpBatchLink, httpLink, splitLink } from "@trpc/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { config } from "./config";
-import superjson from "superjson";
-import { trpc } from "./utils/trpc";
+import { trpc, trpcClientOptions } from "./utils/trpc";
 import ErrorPage from "~components/Error";
 import { AdminHome } from "~pages/administration/AdminHome";
 import { retryUnlessForbidden } from "~utils/helper";
 import { AdminContest } from "~pages/administration/AdminContest";
+import { AdminChallenge } from "~pages/administration/AdminChallenge";
 
 export interface TokenProp {
   token: string | null;
@@ -28,12 +29,6 @@ export interface TokenProp {
 export interface TokenSetterProp {
   token: [string | null, React.Dispatch<React.SetStateAction<string | null>>];
 }
-
-const url = `${document.location.protocol}//${
-  import.meta.env.DEV
-    ? `${document.location.hostname}:${import.meta.env.VITE_DEV_PORT}`
-    : document.location.host
-}/trpc`;
 
 export const App: React.FC<{}> = () => {
   const [queryClient] = useState(
@@ -46,40 +41,7 @@ export const App: React.FC<{}> = () => {
         },
       })
   );
-  const [trpcClient] = useState(() =>
-    trpc.createClient({
-      links: [
-        splitLink({
-          condition(op) {
-            // check for context property `skipBatch`
-            // don't batch test case fetching
-            return (
-              op.context.skipBatch === true || op.path === "results.getTest"
-            );
-          },
-          // when condition is true, use normal request
-          true: httpLink({
-            url,
-            async headers() {
-              return {
-                token: localStorage.getItem("token") || "",
-              };
-            },
-          }),
-          // when condition is false, use batching
-          false: httpBatchLink({
-            url,
-            async headers() {
-              return {
-                token: localStorage.getItem("token") || "",
-              };
-            },
-          }),
-        }),
-      ],
-      transformer: superjson,
-    })
-  );
+  const [trpcClient] = useState(() => trpc.createClient(trpcClientOptions));
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
@@ -104,7 +66,11 @@ export const App: React.FC<{}> = () => {
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/register" element={<Register />} />
             <Route path="/admin" element={<AdminHome />} />
-            <Route path="/admin/:contest" element={<AdminContest />} />
+            <Route path="/admin/contest/:contest" element={<AdminContest />} />
+            <Route
+              path="/admin/challenge/:challenge"
+              element={<AdminChallenge />}
+            />
             <Route path="*" element={<ErrorPage messageId="ERR_404" />} />
           </Routes>
         </Router>

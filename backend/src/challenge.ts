@@ -9,6 +9,7 @@ import { protectedProcedure } from "./auth";
 import { TRPCError } from "@trpc/server";
 import { submit } from "./submit";
 import { prisma } from "./server";
+import { adminProcedure } from "./admin";
 
 const publicChallengeProcedure = protectedProcedure
   .input(z.object({ contest: z.string(), challenge: z.string() }))
@@ -28,6 +29,41 @@ const protectedChallengeProcedure = publicChallengeProcedure.use(
 );
 
 export const challengeRouter = router({
+  list: adminProcedure.query(async () => {
+    return await prisma.challenge.findMany();
+  }),
+
+  getAdmin: adminProcedure
+    .input(z.object({ challenge: z.string() }))
+    .query(async ({ input }) => {
+      const { challenge } = input;
+
+      return await prisma.challenge.findUniqueOrThrow({
+        where: {
+          id: challenge,
+        },
+        include: {
+          tasks: {
+            select: {
+              tests: {
+                select: {
+                  test_number: true,
+                  is_example: true,
+                  comment: true,
+                  explanation: true,
+                  input: true,
+                  output: true,
+                },
+              },
+              type: true,
+              task_number: true,
+              weight: true,
+            },
+          },
+        },
+      });
+    }),
+
   get: protectedChallengeProcedure.query(async ({ input }) => {
     const { contest, challenge } = input;
 
@@ -48,7 +84,15 @@ export const challengeRouter = router({
             output_format: true,
             time_limit: true,
             memory_limit: true,
-            tasks: true,
+            tasks: {
+              include: {
+                tests: {
+                  select: {
+                    test_number: true,
+                  },
+                },
+              },
+            },
             tests: {
               where: { is_example: true },
               select: {

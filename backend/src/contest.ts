@@ -5,6 +5,7 @@ import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { publicProcedure, router } from "./trpc";
 import { z } from "zod";
 import { isAdmin, protectedProcedure } from "./auth";
+import { adminProcedure } from "./admin";
 
 const publicContestProcedure = publicProcedure
   .input(z.object({ contest: z.string() }))
@@ -21,6 +22,26 @@ const protectedContestProcedure = protectedProcedure
   });
 
 export const contestRouter = router({
+  getAdmin: adminProcedure
+    .input(z.object({ contest: z.string() }))
+    .query(async ({ input }) => {
+      const { contest } = input;
+
+      return await prisma.contest.findUniqueOrThrow({
+        where: {
+          id: contest,
+        },
+        include: {
+          challenges: {
+            select: {
+              challenge_id: true,
+              max_score: true,
+            },
+          },
+        },
+      });
+    }),
+
   list: publicProcedure.query(async () => {
     const result = await prisma.contest.findMany({
       select: {
@@ -64,13 +85,16 @@ export const contestRouter = router({
       },
     });
 
-    const canViewContest = uId && (await checkContestAuth(uId, contest)).joined;
+    const canViewContest =
+      uId !== undefined && (await checkContestAuth(uId, contest)).joined;
     if (!canViewContest) {
       result.challenges.forEach(({ challenge }, i) => {
         challenge.title = `Challenge ${i + 1}`;
         challenge.id = "hidden";
       });
     }
+
+    console.log(result);
 
     return result;
   }),
@@ -102,7 +126,7 @@ export const contestRouter = router({
   validate: publicContestProcedure.query(
     async ({ input, ctx }): Promise<ContestValidation> => {
       const contest = input.contest;
-      if (!ctx.uId) return { joined: false, joinTime: null };
+      if (ctx.uId === undefined) return { joined: false, joinTime: null };
       const uId = ctx.uId;
 
       return await checkContestAuth(uId, contest);

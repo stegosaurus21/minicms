@@ -223,30 +223,16 @@ export async function judgeCallback(
       submission: {
         connect: { token: submission },
       },
-      task: {
-        connect: {
-          challenge_id_task_number: {
-            challenge_id: challenge,
-            task_number: task_number,
-          },
-        },
-      },
-      test: {
-        connect: {
-          challenge_id_task_number_test_number: {
-            challenge_id: challenge,
-            task_number: task_number,
-            test_number: test_number,
-          },
-        },
-      },
+      challenge_id: challenge,
+      task_number: task_number,
+      test_number: test_number,
       token: body.token,
       time: parseFloat(body.time) || 0,
       memory: body.memory || 0,
       status: body.status.description,
       compile_output:
         body.compile_output ||
-        Buffer.from("Compilation sucessful.").toString("base64"),
+        Buffer.from("Compilation successful.").toString("base64"),
     },
   });
 

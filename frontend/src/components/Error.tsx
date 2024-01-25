@@ -25,6 +25,8 @@ export const errorMessages = {
     "A server error occurred when fetching the submission.",
   "ERR_GENERAL": "An error occurred.",
   "ERR_NOT_ADMIN": "You do not have access to administrator controls",
+  "ERR_CHAL_LIST_FETCH":
+    "A server error occurred when fetching the challenge list.",
 };
 
 export type ErrorCode = keyof typeof errorMessages;

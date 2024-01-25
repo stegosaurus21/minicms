@@ -1,0 +1,21 @@
+-- RedefineTables
+PRAGMA foreign_keys=OFF;
+CREATE TABLE "new_Test" (
+    "test_number" INTEGER NOT NULL,
+    "is_example" BOOLEAN NOT NULL,
+    "challenge_id" TEXT NOT NULL,
+    "task_number" INTEGER NOT NULL,
+    "comment" TEXT NOT NULL,
+    "explanation" TEXT NOT NULL,
+    "input" TEXT NOT NULL,
+    "output" TEXT NOT NULL,
+
+    PRIMARY KEY ("challenge_id", "task_number", "test_number"),
+    CONSTRAINT "Test_challenge_id_task_number_fkey" FOREIGN KEY ("challenge_id", "task_number") REFERENCES "Task" ("challenge_id", "task_number") ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT "Test_challenge_id_fkey" FOREIGN KEY ("challenge_id") REFERENCES "Challenge" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+INSERT INTO "new_Test" ("challenge_id", "comment", "explanation", "input", "is_example", "output", "task_number", "test_number") SELECT "challenge_id", "comment", "explanation", "input", "is_example", "output", "task_number", "test_number" FROM "Test";
+DROP TABLE "Test";
+ALTER TABLE "new_Test" RENAME TO "Test";
+PRAGMA foreign_key_check;
+PRAGMA foreign_keys=ON;

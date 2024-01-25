@@ -43,9 +43,7 @@ model Result {
   submission       Submission @relation(fields: [submission_token], references: [token])
   submission_token String
   challenge_id     String
-  task             Task       @relation(fields: [challenge_id, task_number], references: [challenge_id, task_number])
   task_number      Int
-  test             Test       @relation(fields: [challenge_id, task_number, test_number], references: [challenge_id, task_number, test_number])
   test_number      Int
   token            String
   time             Float
@@ -108,13 +106,12 @@ model Task {
   task_number  Int
   weight       Int
   tests        Test[]
-  Result       Result[]
 
   @@id([challenge_id, task_number])
 }
 
 model Test {
-  task         Task      @relation(fields: [challenge_id, task_number], references: [challenge_id, task_number])
+  task         Task      @relation(fields: [challenge_id, task_number], references: [challenge_id, task_number], onDelete: Cascade)
   challenge    Challenge @relation(fields: [challenge_id], references: [id])
   test_number  Int
   is_example   Boolean
@@ -124,7 +121,6 @@ model Test {
   explanation  String
   input        String
   output       String
-  Result       Result[]
 
   @@id([challenge_id, task_number, test_number])
 }

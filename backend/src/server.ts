@@ -51,6 +51,7 @@ export const judgeSecret = v4();
 app.put(
   `/callback/${judgeSecret}/:submission/:taskNum/:testNum/:timeSent`,
   async (req, res) => {
+    console.log("got????");
     if (parseInt(req.params.timeSent) < lastClear) return res.json();
     await judgeCallback(
       req.body,
@@ -65,6 +66,7 @@ app.put(
 app.use(errorHandler);
 app.use(express.static("public"));
 app.get("*", (req, res) => {
+  console.log(req.body);
   res.sendFile("index.html", { root: "public" }, (err) => {
     res.end();
 

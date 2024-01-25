@@ -62,6 +62,9 @@ export async function submit(
       return true;
     });
 
+    const callback_host =
+      BACKEND_URL === "0.0.0.0" ? "host.docker.internal" : BACKEND_URL;
+
     const responses = await Promise.all(
       tasks.map((task) =>
         Promise.all(
@@ -76,7 +79,7 @@ export async function submit(
                 expected_output: test.output,
                 cpu_time_limit: time_limit,
                 memory_limit: memory_limit,
-                callback_url: `http://${BACKEND_URL}:${BACKEND_PORT}/callback/${judgeSecret}/${submission}/${
+                callback_url: `http://${callback_host}:${BACKEND_PORT}/callback/${judgeSecret}/${submission}/${
                   task.task_number
                 }/${test.test_number}/${Date.now()}`,
               }),
