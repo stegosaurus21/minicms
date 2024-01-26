@@ -1,5 +1,10 @@
 import { Badge, Table } from "react-bootstrap";
-import { prettyDate, round2dp, styleScore } from "utils/helper";
+import {
+  prettyDate,
+  round2dp,
+  styleScore,
+  useNavigateShim,
+} from "utils/helper";
 import { Submission } from "interface";
 import style from "../../styles.module.css";
 import { useNavigate } from "react-router-dom";
@@ -14,7 +19,7 @@ const ChallengeSubmissions = (props: {
     .filter((x) => x.score != null && (showUnofficial || x.official))
     .sort((a, b) => a.index - b.index);
 
-  const navigate = useNavigate();
+  const navigate = useNavigateShim();
 
   return (
     <Table bordered className="mt-2 w-75">

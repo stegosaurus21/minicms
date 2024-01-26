@@ -5,16 +5,16 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import styles from "../styles.module.css";
 import { trpc } from "utils/trpc";
 import { error, handleError } from "components/Error";
-import { assertQuerySuccess } from "utils/helper";
+import { assertQuerySuccess, useNavigateShim } from "utils/helper";
 import { passwordOk } from "./Register";
+import { toast } from "react-toastify";
 
 const Login = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigateShim();
   const [params, setParams] = useSearchParams();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -51,16 +51,6 @@ const Login = () => {
 
   return (
     <Container>
-      <Alert
-        show={error !== ""}
-        variant="danger"
-        onClose={() => setError("")}
-        dismissible
-      >
-        <Alert.Heading>Error</Alert.Heading>
-        <p>{error}</p>
-      </Alert>
-
       <Modal
         show={showPasswordModal}
         onHide={redirect}
@@ -160,7 +150,7 @@ const Login = () => {
                   }
                 })
                 .catch((e) => {
-                  setError((e as Error).message);
+                  toast.error((e as Error).message, { toastId: "login" });
                 })
             }
           >

@@ -9,7 +9,7 @@ import {
 } from "react-bootstrap";
 import { useLocation, useNavigate } from "react-router-dom";
 import { handleError } from "~components/Error";
-import { assertQuerySuccess } from "~utils/helper";
+import { assertQuerySuccess, useNavigateShim } from "~utils/helper";
 import { trpc } from "~utils/trpc";
 import style from "../../styles.module.css";
 import TimeDisplay from "~components/TimeDisplay";
@@ -28,7 +28,7 @@ import {
 
 export const AdminHome = () => {
   const { hash } = useLocation();
-  const navigate = useNavigate();
+  const navigate = useNavigateShim();
   const utils = trpc.useUtils();
 
   const [now, setNow] = useState(new Date());

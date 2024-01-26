@@ -10,6 +10,7 @@ import {
   parseMemory,
   round2dp,
   styleScore,
+  useNavigateShim,
 } from "utils/helper";
 import style from "../styles.module.css";
 import "katex/dist/katex.min.css";
@@ -19,7 +20,7 @@ import { trpc } from "utils/trpc";
 import { error, handleError } from "components/Error";
 
 const Challenge = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigateShim();
   const params = useParams();
   const [file, setFile] = useState<File>();
   const [submissionLanguage, setSubmissionLanguage] = useState<string>("");

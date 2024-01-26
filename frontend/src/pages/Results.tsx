@@ -19,6 +19,7 @@ import {
   round2dp,
   styleScore,
   styleStatus,
+  useNavigateShim,
 } from "utils/helper";
 import style from "../styles.module.css";
 import { Buffer } from "buffer";
@@ -31,7 +32,7 @@ import { AppRouter } from "../../../backend/src/app";
 type TestResult = inferRouterOutputs<AppRouter>["results"]["getTest"];
 
 const Results = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigateShim();
   const params = useParams();
 
   try {

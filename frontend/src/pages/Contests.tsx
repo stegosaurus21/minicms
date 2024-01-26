@@ -6,11 +6,11 @@ import style from "../styles.module.css";
 import TimeDisplay from "components/TimeDisplay";
 import { trpc } from "utils/trpc";
 import { error, handleError } from "components/Error";
-import { assertQuerySuccess } from "utils/helper";
+import { assertQuerySuccess, useNavigateShim } from "utils/helper";
 
 const Contests = () => {
   const [now, setNow] = useState(new Date());
-  const navigate = useNavigate();
+  const navigate = useNavigateShim();
 
   useEffect(() => {
     const ticker = setInterval(() => setNow(new Date()), 1000);

@@ -6,11 +6,16 @@ import style from "../styles.module.css";
 import { RenderableLeaderboard } from "interface";
 import ContestLeaderboard from "components/Contests/ContestLeaderboard";
 import { trpc } from "utils/trpc";
-import { assertQuerySuccess, round2dp, styleScore } from "utils/helper";
+import {
+  assertQuerySuccess,
+  round2dp,
+  styleScore,
+  useNavigateShim,
+} from "utils/helper";
 import { error, handleError } from "components/Error";
 
 const ContestPage = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigateShim();
   const params = useParams();
 
   const [showUnofficial, setShowUnofficial] = useState<boolean>(false);

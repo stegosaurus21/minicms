@@ -11,7 +11,7 @@ import {
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import ErrorPage, { error, handleError } from "~components/Error";
-import { assertQuerySuccess } from "~utils/helper";
+import { assertQuerySuccess, useNavigateShim } from "~utils/helper";
 import { trpc } from "~utils/trpc";
 import { inferRouterOutputs } from "@trpc/server";
 import { AppRouter } from "../../../../backend/src/app";
@@ -23,13 +23,14 @@ import {
   ChallengeCreateData,
   NewChallengeModal,
 } from "~components/Administration/NewChallengeModal";
+import { toast } from "react-toastify";
 
 type ContestData = inferRouterOutputs<AppRouter>["contest"]["getAdmin"];
 
 export const AdminContest = () => {
   const params = useParams();
   const utils = trpc.useUtils();
-  const navigate = useNavigate();
+  const navigate = useNavigateShim();
 
   if (!params["contest"]) throw error("ERR_CONTEST_MISSING");
   const paramContestId = params["contest"].replace(":", "/");
@@ -74,6 +75,9 @@ export const AdminContest = () => {
         },
       });
       utils.contest.invalidate();
+      toast.success("Contest updated successfully!", {
+        toastId: "contest_update",
+      });
     } catch (e) {
       console.error(e);
     }

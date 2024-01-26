@@ -3,7 +3,11 @@ import { Controller, useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { trpc } from "~utils/trpc";
 import { AppRouter } from "../../../../backend/src/app";
-import { ArrayElement, assertQuerySuccess } from "~utils/helper";
+import {
+  ArrayElement,
+  assertQuerySuccess,
+  useNavigateShim,
+} from "~utils/helper";
 import ErrorPage, { error, handleError } from "~components/Error";
 import { Accordion, Button, Container, Form, Table } from "react-bootstrap";
 import style from "../../styles.module.css";
@@ -12,6 +16,7 @@ import {
   EditTestModal,
   TestData,
 } from "~components/Administration/EditTestModal";
+import { toast } from "react-toastify";
 
 export type ChallengeData =
   inferRouterOutputs<AppRouter>["challenge"]["getAdmin"];
@@ -19,7 +24,7 @@ export type TaskData = ArrayElement<ChallengeData["tasks"]>;
 
 export const AdminChallenge = () => {
   const params = useParams();
-  const navigate = useNavigate();
+  const navigate = useNavigateShim();
 
   const utils = trpc.useUtils();
 
@@ -69,6 +74,9 @@ export const AdminChallenge = () => {
         },
       });
       await utils.challenge.invalidate();
+      toast.success("Challenge updated successfully!", {
+        toastId: "challenge_update",
+      });
     } catch (e) {
       console.error(e);
     }

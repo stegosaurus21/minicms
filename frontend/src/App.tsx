@@ -11,6 +11,7 @@ import Results from "./pages/Results";
 import { Breadcrumb, Container } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "react-bootstrap-typeahead/css/Typeahead.css";
+import "react-toastify/dist/ReactToastify.min.css";
 import style from "./styles.module.css";
 import { httpBatchLink, httpLink, splitLink } from "@trpc/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -21,6 +22,7 @@ import { AdminHome } from "~pages/administration/AdminHome";
 import { retryUnlessForbidden } from "~utils/helper";
 import { AdminContest } from "~pages/administration/AdminContest";
 import { AdminChallenge } from "~pages/administration/AdminChallenge";
+import { ToastContainer } from "react-toastify";
 
 export interface TokenProp {
   token: string | null;
@@ -73,6 +75,7 @@ export const App: React.FC<{}> = () => {
             />
             <Route path="*" element={<ErrorPage messageId="ERR_404" />} />
           </Routes>
+          <ToastContainer position="top-center" />
         </Router>
       </QueryClientProvider>
     </trpc.Provider>

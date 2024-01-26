@@ -5,6 +5,8 @@ import {
 import { Duration, format, formatDuration, intervalToDuration } from "date-fns";
 import { error, errorMessages } from "components/Error";
 import { TRPCClientError } from "@trpc/client";
+import { NavigateOptions, To, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 export function contestOpen(starts: number | null, ends: number | null) {
   if (starts && Date.now() < starts) return false;
@@ -103,6 +105,14 @@ export function retryUnlessForbidden(failureCount: number, error: unknown) {
   }
 
   return failureCount < 3;
+}
+
+export function useNavigateShim() {
+  const navigate = useNavigate();
+  return (to: To, options?: NavigateOptions) => {
+    toast.dismiss();
+    navigate(to, options);
+  };
 }
 
 export type ArrayElement<A> = A extends readonly (infer T)[] ? T : never;

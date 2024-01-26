@@ -6,19 +6,19 @@ import { config } from "../config";
 import { trpc } from "utils/trpc";
 import { useQueryClient } from "@tanstack/react-query";
 import { error, handleError } from "components/Error";
-import { assertQuerySuccess } from "utils/helper";
+import { assertQuerySuccess, useNavigateShim } from "utils/helper";
+import { toast } from "react-toastify";
 
 export function passwordOk(password: string) {
   return password.length >= 6;
 }
 
 const Register = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigateShim();
 
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [error, setError] = useState("");
 
   const validUserNameFormat = () => {
     return /^([A-Za-z0-9-]){3,}$/.test(username);
@@ -46,15 +46,6 @@ const Register = () => {
 
   return (
     <Container>
-      <Alert
-        show={error !== ""}
-        variant="danger"
-        onClose={() => setError("")}
-        dismissible
-      >
-        <Alert.Heading>Error</Alert.Heading>
-        <p>{error}</p>
-      </Alert>
       <Form className="w-75">
         <Form.Group>
           <Form.Label>Username</Form.Label>
@@ -107,7 +98,7 @@ const Register = () => {
                 .mutateAsync({ username: username, password: password })
                 .then(() => navigate("/auth/login"))
                 .catch((e) => {
-                  setError((e as Error).message);
+                  toast.error((e as Error).message, { toastId: "register" });
                 });
             }}
             disabled={!canSubmit()}

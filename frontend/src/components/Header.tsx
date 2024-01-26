@@ -4,9 +4,10 @@ import Nav from "react-bootstrap/Nav";
 import Navbar from "react-bootstrap/Navbar";
 import style from "../styles.module.css";
 import { trpc } from "utils/trpc";
+import { useNavigateShim } from "~utils/helper";
 
 const Header = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigateShim();
   const utils = trpc.useUtils();
   const user = trpc.auth.validate.useQuery();
   const admin = trpc.auth.isAdmin.useQuery(undefined, {

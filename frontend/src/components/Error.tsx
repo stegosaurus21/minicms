@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import Container from "react-bootstrap/Container";
 import style from "../styles.module.css";
-import { LoadingMarker } from "utils/helper";
+import { LoadingMarker, useNavigateShim } from "utils/helper";
 
 export const errorMessages = {
   "ERR_404": "Page not found.",
@@ -32,7 +32,7 @@ export const errorMessages = {
 export type ErrorCode = keyof typeof errorMessages;
 
 const ErrorPage = (props: { messageId: ErrorCode }) => {
-  const navigate = useNavigate();
+  const navigate = useNavigateShim();
   return (
     <Container>
       <span className={style.returnLink} onClick={() => navigate("./..")}>
