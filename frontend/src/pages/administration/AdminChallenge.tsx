@@ -3,7 +3,7 @@ import { Controller, useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { trpc } from "~utils/trpc";
 import { AppRouter } from "../../../../backend/src/app";
-import { assertQuerySuccess } from "~utils/helper";
+import { ArrayElement, assertQuerySuccess } from "~utils/helper";
 import ErrorPage, { error, handleError } from "~components/Error";
 import { Accordion, Button, Container, Form, Table } from "react-bootstrap";
 import style from "../../styles.module.css";
@@ -15,10 +15,13 @@ import {
 
 export type ChallengeData =
   inferRouterOutputs<AppRouter>["challenge"]["getAdmin"];
+export type TaskData = ArrayElement<ChallengeData["tasks"]>;
 
 export const AdminChallenge = () => {
   const params = useParams();
   const navigate = useNavigate();
+
+  const utils = trpc.useUtils();
 
   if (!params["challenge"]) throw error("ERR_CHAL_MISSING");
   const paramChallengeId = params["challenge"].replace(":", "/");
@@ -65,6 +68,7 @@ export const AdminChallenge = () => {
           })),
         },
       });
+      await utils.challenge.invalidate();
     } catch (e) {
       console.error(e);
     }
@@ -73,6 +77,32 @@ export const AdminChallenge = () => {
   function updateTest(data: TestData) {
     setValue(`tasks.${editingTask}.tests.${data.test_number}`, data);
     setEditingTestData(undefined);
+  }
+
+  function addTask() {
+    setValue("tasks", [
+      ...getValues("tasks"),
+      {
+        type: "INDIVIDUAL",
+        weight: 1,
+        task_number: getValues("tasks").length,
+        tests: [],
+      },
+    ]);
+  }
+
+  function addTest(task: TaskData) {
+    const newTest = {
+      test_number: getValues(`tasks.${task.task_number}.tests`).length,
+      input: "",
+      output: "",
+      comment: "",
+      explanation: "",
+      is_example: false,
+    };
+    setValue(`tasks.${task.task_number}.tests`, [...task.tests, newTest]);
+    setEditingTask(task.task_number);
+    setEditingTestData(newTest);
   }
 
   try {
@@ -137,21 +167,7 @@ export const AdminChallenge = () => {
             {...register("output_format")}
           />
           <h2>Tasks</h2>
-          <Button
-            onClick={() => {
-              setValue("tasks", [
-                ...getValues("tasks"),
-                {
-                  type: "INDIVIDUAL",
-                  weight: 1,
-                  task_number: getValues("tasks").length,
-                  tests: [],
-                },
-              ]);
-            }}
-          >
-            Add task
-          </Button>
+          <Button onClick={addTask}>Add task</Button>
           <Controller
             control={control}
             name={"tasks"}
@@ -173,19 +189,7 @@ export const AdminChallenge = () => {
                           <Accordion.Body>
                             <Button
                               onClick={() => {
-                                setValue(`tasks.${task.task_number}.tests`, [
-                                  ...task.tests,
-                                  {
-                                    test_number: getValues(
-                                      `tasks.${task.task_number}.tests`
-                                    ).length,
-                                    input: "",
-                                    output: "",
-                                    comment: "",
-                                    explanation: "",
-                                    is_example: false,
-                                  },
-                                ]);
+                                addTest(task);
                               }}
                             >
                               Add test
