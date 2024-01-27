@@ -1,17 +1,15 @@
 import { useState } from "react";
-import { Form, Button, Container, Alert, Modal } from "react-bootstrap";
-import { useNavigate, useSearchParams } from "react-router-dom";
-
-import styles from "../styles.module.css";
+import { Form, Button, Container, Modal } from "react-bootstrap";
+import { useSearchParams } from "react-router-dom";
 import { trpc } from "utils/trpc";
-import { error, handleError } from "components/Error";
+import { handleError } from "components/Error";
 import { assertQuerySuccess, useNavigateShim } from "utils/helper";
 import { passwordOk } from "./Register";
 import { toast } from "react-toastify";
 
 const Login = () => {
   const navigate = useNavigateShim();
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");

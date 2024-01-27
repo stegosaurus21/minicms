@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, Container, Tab, Table, Tabs } from "react-bootstrap";
 import FormCheckInput from "react-bootstrap/esm/FormCheckInput";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import style from "../styles.module.css";
 import { RenderableLeaderboard } from "interface";
 import ContestLeaderboard from "components/Contests/ContestLeaderboard";
@@ -117,7 +117,7 @@ const ContestPage = () => {
                     </thead>
                     <tbody>
                       {contest.data.challenges.map(
-                        ({ challenge, submissions, max_score }, i) => {
+                        ({ challenge, submissions, max_score }) => {
                           const score = Math.max(
                             0,
                             ...submissions.map((x) => x.score || 0)
@@ -167,38 +167,38 @@ const ContestPage = () => {
                   (sortedLeaderboard.findIndex(
                     (x) => x.name === user.data.username
                   ) !== -1 ? (
-                    <p>
+                      <p>
                       Your {showUnofficial ? "un" : ""}
                       official position is{" "}
-                      {`${
-                        sortedLeaderboard.findIndex(
-                          (x) => x.name === user.data.username
-                        ) + 1
-                      }${
-                        ["st", "nd", "rd", "th"][
-                          Math.min(
-                            4,
-                            sortedLeaderboard.findIndex(
-                              (x) => x.name === user.data.username
-                            ) % 10
-                          )
-                        ]
-                      }`}{" "}
+                        {`${
+                          sortedLeaderboard.findIndex(
+                            (x) => x.name === user.data.username
+                          ) + 1
+                        }${
+                          ["st", "nd", "rd", "th"][
+                            Math.min(
+                              4,
+                              sortedLeaderboard.findIndex(
+                                (x) => x.name === user.data.username
+                              ) % 10
+                            )
+                          ]
+                        }`}{" "}
                       out of {sortedLeaderboard.length} participant
-                      {sortedLeaderboard.length > 1 ? "s" : ""}.
-                    </p>
-                  ) : (
-                    <p>
+                        {sortedLeaderboard.length > 1 ? "s" : ""}.
+                      </p>
+                    ) : (
+                      <p>
                       You{" "}
-                      {contest.data.end_time === null ||
+                        {contest.data.end_time === null ||
                       new Date() < contest.data.end_time ||
                       showUnofficial
-                        ? "are"
-                        : "were"}{" "}
+                          ? "are"
+                          : "were"}{" "}
                       not a{showUnofficial ? "" : "n official"} participant in
                       this contest.
-                    </p>
-                  ))}
+                      </p>
+                    ))}
                 <ContestLeaderboard
                   showUnofficial={showUnofficial}
                   username={user.data.username}

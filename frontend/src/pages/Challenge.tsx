@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, Container, Table, Form, Badge } from "react-bootstrap";
 import { ReactMarkdown } from "react-markdown/lib/react-markdown";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -157,13 +157,15 @@ const Challenge = () => {
           remarkPlugins={[remarkMath, remarkGfm]}
           rehypePlugins={[rehypeKatex]}
           components={{
+            // Seems like the best way to do this
+            // eslint-disable-next-line no-unused-vars
             table: ({ node, ...props }) => (
               <Table className="w-75" bordered {...props}></Table>
             ),
-            td: ({ node, ...props }) => (
+            td: ({ children }) => (
               <td>
                 <pre>
-                  <code>{props.children[0]}</code>
+                  <code>{children[0]}</code>
                 </pre>
               </td>
             ),

@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import { Container, Table } from "react-bootstrap";
-import { useNavigate } from "react-router-dom";
-import { ContestMeta } from "interface";
 import style from "../styles.module.css";
 import TimeDisplay from "components/TimeDisplay";
 import { trpc } from "utils/trpc";
-import { error, handleError } from "components/Error";
+import { handleError } from "components/Error";
 import { assertQuerySuccess, useNavigateShim } from "utils/helper";
 
 const Contests = () => {

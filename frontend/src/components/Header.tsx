@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import Container from "react-bootstrap/Container";
 import Nav from "react-bootstrap/Nav";
 import Navbar from "react-bootstrap/Navbar";
@@ -33,10 +32,10 @@ const Header = () => {
               user.isSuccess && !user.data.isLoggedIn
                 ? navigate("/auth/login")
                 : logout.mutateAsync().then(() => {
-                    localStorage.removeItem("token");
-                    utils.auth.invalidate();
-                    navigate("/");
-                  })
+                  localStorage.removeItem("token");
+                  utils.auth.invalidate();
+                  navigate("/");
+                })
             }
           >
             {user.isSuccess && !user.data.isLoggedIn

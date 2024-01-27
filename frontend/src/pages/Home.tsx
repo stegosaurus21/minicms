@@ -1,7 +1,6 @@
-import React, { useState } from "react";
 import { Container } from "react-bootstrap";
 
-const Home: React.FC<{}> = () => {
+const Home = () => {
   return (
     <>
       <Container className="justify-content-center text-center">

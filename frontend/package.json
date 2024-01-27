@@ -7,7 +7,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "typewatch": "tsc --noEmit --watch"
+    "typewatch": "tsc --noEmit --watch",
+    "lint": "eslint src/**/*.tsx",
+    "lint-fix": "eslint src/**/*.tsx --fix"
   },
   "license": "MIT",
   "dependencies": {
@@ -34,7 +36,9 @@
   "devDependencies": {
     "@types/react": "^18.2.7",
     "@types/react-dom": "^18.2.4",
+    "@typescript-eslint/eslint-plugin": "^6.19.1",
     "babel-preset-nano-react-app": "^0.1.0",
+    "eslint": "^8.56.0",
     "nodemon": "^3.0.1",
     "typescript": "^5.0.4",
     "vite": "^4.3.8",

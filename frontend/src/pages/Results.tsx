@@ -8,11 +8,9 @@ import {
   Spinner,
   Table,
 } from "react-bootstrap";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
   ArrayElement,
-  LoadingMarker,
-  assertAllQueriesSuccess,
   assertQuerySuccess,
   parseMemory,
   prettyDate,
@@ -161,7 +159,7 @@ const Results = () => {
 
     if (
       taskResults.find((x) => x.status === "Judging") ||
-      taskResults.length == 0
+      taskResults.length === 0
     )
       return null;
 
@@ -192,8 +190,8 @@ const Results = () => {
           <Badge
             bg={styleScore(queryScore.data, queryChallenge.data.max_score)}
           >{`${round2dp(queryScore.data)}/${
-            queryChallenge.data.max_score
-          }`}</Badge>
+              queryChallenge.data.max_score
+            }`}</Badge>
         ) : (
           <Spinner as="span" animation="border"></Spinner>
         )}
@@ -240,8 +238,8 @@ const Results = () => {
                     <Badge
                       bg={styleScore(subtaskScore(task), subtaskMaxScore(task))}
                     >{`${round2dp(subtaskScore(task))}/${subtaskMaxScore(
-                      task
-                    )}`}</Badge>
+                        task
+                      )}`}</Badge>
                   ) : (
                     <Spinner as="span" size="sm" animation="border"></Spinner>
                   )}
