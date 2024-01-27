@@ -2,7 +2,11 @@ import { useState } from "react";
 import { Form, Button, Container } from "react-bootstrap";
 import { trpc } from "utils/trpc";
 import { handleError } from "components/Error";
-import { assertQuerySuccess, useNavigateShim } from "utils/helper";
+import {
+  assertQuerySuccess,
+  refreshToast,
+  useNavigateShim,
+} from "utils/helper";
 import { toast } from "react-toastify";
 
 export function passwordOk(password: string) {
@@ -94,7 +98,7 @@ const Register = () => {
                 .mutateAsync({ username: username, password: password })
                 .then(() => navigate("/auth/login"))
                 .catch((e) => {
-                  toast.error((e as Error).message, { toastId: "register" });
+                  refreshToast("error", (e as Error).message, "register");
                 });
             }}
             disabled={!canSubmit()}

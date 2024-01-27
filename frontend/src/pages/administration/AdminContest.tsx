@@ -11,7 +11,11 @@ import {
 import { Controller, useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import ErrorPage, { error, handleError } from "~components/Error";
-import { assertQuerySuccess, useNavigateShim } from "~utils/helper";
+import {
+  assertQuerySuccess,
+  refreshToast,
+  useNavigateShim,
+} from "~utils/helper";
 import { trpc } from "~utils/trpc";
 import { inferRouterOutputs } from "@trpc/server";
 import { AppRouter } from "../../../../backend/src/app";
@@ -72,9 +76,11 @@ export const AdminContest = () => {
         },
       });
       utils.contest.invalidate();
-      toast.success("Contest updated successfully!", {
-        toastId: "contest_update",
-      });
+      refreshToast(
+        "success",
+        "Contest updated successfully!",
+        "contest_update"
+      );
     } catch (e) {
       console.error(e);
     }

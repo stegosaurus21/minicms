@@ -75,7 +75,7 @@ export const App: React.FC<{}> = () => {
             />
             <Route path="*" element={<ErrorPage messageId="ERR_404" />} />
           </Routes>
-          <ToastContainer position="top-center" />
+          <ToastContainer position="top-center" autoClose={3000} />
         </Router>
       </QueryClientProvider>
     </trpc.Provider>

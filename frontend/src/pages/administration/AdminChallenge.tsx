@@ -6,6 +6,7 @@ import { AppRouter } from "../../../../backend/src/app";
 import {
   ArrayElement,
   assertQuerySuccess,
+  refreshToast,
   useNavigateShim,
 } from "~utils/helper";
 import ErrorPage, { error, handleError } from "~components/Error";
@@ -74,9 +75,11 @@ export const AdminChallenge = () => {
         },
       });
       await utils.challenge.invalidate();
-      toast.success("Challenge updated successfully!", {
-        toastId: "challenge_update",
-      });
+      refreshToast(
+        "success",
+        "Challenge updated successfully!",
+        "challenge_update"
+      );
     } catch (e) {
       console.error(e);
     }

@@ -3,7 +3,11 @@ import { Form, Button, Container, Modal } from "react-bootstrap";
 import { useSearchParams } from "react-router-dom";
 import { trpc } from "utils/trpc";
 import { handleError } from "components/Error";
-import { assertQuerySuccess, useNavigateShim } from "utils/helper";
+import {
+  assertQuerySuccess,
+  refreshToast,
+  useNavigateShim,
+} from "utils/helper";
 import { passwordOk } from "./Register";
 import { toast } from "react-toastify";
 
@@ -148,7 +152,7 @@ const Login = () => {
                   }
                 })
                 .catch((e) => {
-                  toast.error((e as Error).message, { toastId: "login" });
+                  refreshToast("error", (e as Error).message, "login");
                 })
             }
           >

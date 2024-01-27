@@ -6,7 +6,7 @@ import { Duration, format, formatDuration, intervalToDuration } from "date-fns";
 import { error, errorMessages } from "components/Error";
 import { TRPCClientError } from "@trpc/client";
 import { NavigateOptions, To, useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import { Bounce, Flip, Zoom, toast } from "react-toastify";
 
 export function contestOpen(starts: number | null, ends: number | null) {
   if (starts && Date.now() < starts) return false;
@@ -113,6 +113,24 @@ export function useNavigateShim() {
     toast.dismiss();
     navigate(to, options);
   };
+}
+
+export function refreshToast(
+  type: "error" | "success",
+  message: string,
+  id: string
+) {
+  if (toast.isActive(id)) {
+    toast.update(id, { progress: 0, transition: undefined });
+    toast.update(id, { progress: 0, transition: Zoom });
+  }
+  switch (type) {
+    case "error":
+      toast.error(message, { toastId: id });
+      break;
+    case "success":
+      toast.success(message, { toastId: id });
+  }
 }
 
 export type ArrayElement<A> = A extends readonly (infer T)[] ? T : never;
