@@ -1,6 +1,4 @@
-import { access, readFile } from "fs/promises";
 import createError, { HttpError } from "http-errors";
-import fs from "fs";
 import { v4 } from "uuid";
 import {
   BACKEND_PORT,
@@ -55,7 +53,7 @@ export async function submit(
   const totalTests = tasks.reduce((p, n) => p + n.tests.length, 0);
   let resultPromise: Promise<boolean>;
   try {
-    resultPromise = new Promise<boolean>((resolve, reject) => {
+    resultPromise = new Promise<boolean>((resolve) => {
       awaitScoring.set(submission, { counter: totalTests, resolve: resolve });
     }).then(() => {
       processResult(submission);

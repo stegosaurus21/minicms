@@ -3,14 +3,17 @@ import { getUser } from "./auth";
 import { Request } from "express";
 
 export async function createContext(opts: CreateNextContextOptions) {
-  let uId: number | undefined = undefined;
-  let token: string | undefined = undefined;
+  let uId: number | undefined;
+  let token: string | undefined;
   try {
     if (opts.req.headers?.token) {
       token = opts.req.headers.token;
       uId = await getUser(opts.req);
     }
-  } catch {}
+  } catch {
+    uId = undefined;
+    token = undefined;
+  }
   return {
     token: token,
     uId: uId,

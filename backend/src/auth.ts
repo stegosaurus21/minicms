@@ -9,7 +9,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { hash } from "./helper";
 
-export const tokens: Map<String, Session> = new Map<String, Session>();
+export const tokens: Map<string, Session> = new Map<string, Session>();
 
 export async function isAdmin(uId: number) {
   return (
@@ -89,8 +89,8 @@ export const authRouter = router({
         });
 
         if (result.password === hash(input.password)) {
-          let newToken = v4();
-          let newSession: Session = {
+          const newToken = v4();
+          const newSession: Session = {
             uId: result.id,
             timeout: Date.now() + 1000 * 60 * 60 * 12,
           };
@@ -108,7 +108,7 @@ export const authRouter = router({
         }
       } catch (e) {
         if (e instanceof PrismaClientKnownRequestError) {
-          if (e.code == "P2025")
+          if (e.code === "P2025")
             throw new TRPCError({
               code: "FORBIDDEN",
               message: "Incorrect username or password.",

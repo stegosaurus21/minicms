@@ -115,8 +115,9 @@ export const challengeRouter = router({
     try {
       await checkChallengeAuth(uId, contest, challenge);
       return { isViewable: true };
-    } catch {}
-    return { isViewable: false };
+    } catch {
+      return { isViewable: false };
+    }
   }),
 
   submit: protectedChallengeProcedure

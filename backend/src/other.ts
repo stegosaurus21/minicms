@@ -3,7 +3,7 @@ import { tokens } from "./auth";
 import { awaitResult, awaitScoring, awaitTest } from "./results";
 import { prisma } from "./server";
 import { HttpError } from "http-errors";
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 
 export async function clear() {
   tokens.clear();
@@ -19,12 +19,7 @@ export async function clear() {
   await rm("./upload", { recursive: true, force: true });
 }
 
-export const errorHandler = (
-  err: HttpError,
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const errorHandler = (err: HttpError, req: Request, res: Response) => {
   const statusCode = err.status || err.statusCode || 500;
   console.log(`${statusCode}: ${statusCode === 500 ? err : err.message}`);
   return res.status(statusCode).json({

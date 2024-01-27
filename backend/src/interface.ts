@@ -87,6 +87,7 @@ export interface Result {
   compile_output: string;
 }
 
+// eslint-disable-next-line no-unused-vars
 export type Resolve = (value: boolean) => void;
 
 export interface ResolveCounter {

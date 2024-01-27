@@ -5,12 +5,9 @@ import { z } from "zod";
 import {
   ChallengeSchema,
   ChallengeWhereUniqueInputSchema,
-  ContestChallengeCreateInputSchema,
   ContestChallengeCreateWithoutContestInputSchema,
-  ContestChallengeSchema,
   ContestSchema,
   ContestWhereUniqueInputSchema,
-  TaskCreateWithoutChallengeInputSchema,
   TaskSchema,
   TaskWhereUniqueInputSchema,
   TestSchema,

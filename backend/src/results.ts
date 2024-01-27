@@ -9,10 +9,10 @@ import { protectedProcedure } from "./auth";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-export const awaitTest: Map<String, Resolve> = new Map<String, Resolve>();
-export const awaitResult: Map<String, Resolve> = new Map<String, Resolve>();
-export const awaitScoring: Map<String, ResolveCounter> = new Map<
-  String,
+export const awaitTest: Map<string, Resolve> = new Map<string, Resolve>();
+export const awaitResult: Map<string, Resolve> = new Map<string, Resolve>();
+export const awaitScoring: Map<string, ResolveCounter> = new Map<
+  string,
   ResolveCounter
 >();
 
@@ -40,7 +40,7 @@ export const resultsRouter = router({
 
   getTest: protectedResultsProcedure
     .input(z.object({ task: z.number(), test: z.number() }))
-    .query(async ({ input, ctx }) => {
+    .query(async ({ input }) => {
       const { submission, task, test } = input;
       return await getTest(submission, task, test);
     }),
@@ -68,9 +68,8 @@ export const resultsRouter = router({
 
   getLeaderboard: publicProcedure
     .input(z.object({ contest: z.string() }))
-    .query(async ({ input, ctx }) => {
+    .query(async ({ input }) => {
       const { contest } = input;
-      const { uId } = ctx;
       return await getLeaderboard(contest);
     }),
 
@@ -154,7 +153,7 @@ export async function getTest(
   } catch (e) {
     if (e instanceof PrismaClientKnownRequestError) {
       if (e.code === "P2025") {
-        await new Promise((resolve, reject) => {
+        await new Promise((resolve) => {
           awaitTest.set(`${submission}/${task_number}/${test_number}`, resolve);
         });
         return getTestInternal(submission, task_number, test_number);
@@ -199,9 +198,9 @@ async function getResultInternal(submission: string) {
 export async function getResult(submission: string): Promise<{
   score: number | null;
 }> {
-  let result = await getResultInternal(submission);
+  const result = await getResultInternal(submission);
   if (result.score === null) {
-    await new Promise((resolve, reject) => {
+    await new Promise((resolve) => {
       awaitResult.set(submission, resolve);
     });
     return await getResultInternal(submission);
@@ -328,16 +327,16 @@ export async function getLeaderboard(contest: string) {
   const official: Record<string, LeaderboardEntry> = {};
   const all: Record<string, LeaderboardEntry> = {};
   for (const { user, time } of participants) {
-    if (contest_end == null || time < contest_end) {
+    if (contest_end === null || time < contest_end) {
       official[user.username] = {
-        results: challenges.map((_) => ({
+        results: challenges.map(() => ({
           score: 0,
           count: 0,
         })),
       };
     }
     all[user.username] = {
-      results: challenges.map((_) => ({
+      results: challenges.map(() => ({
         score: 0,
         count: 0,
       })),
@@ -393,11 +392,7 @@ export async function getLeaderboard(contest: string) {
 } */
 
 export async function checkSubmissionAuth(uId: number, submission: string) {
-  try {
-    await checkSubmissionExists(submission);
-  } catch (err) {
-    throw err;
-  }
+  await checkSubmissionExists(submission);
 
   const owner = await prisma.submission.findUniqueOrThrow({
     select: { owner_id: true },
