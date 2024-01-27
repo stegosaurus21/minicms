@@ -65,25 +65,68 @@ export const adminRouter = router({
         target: ContestWhereUniqueInputSchema,
         data: z.object({
           contest: ContestSchema,
-          challenges: z.array(ContestChallengeCreateWithoutContestInputSchema),
+          challenges: z.array(
+            z.object({
+              challenge_id: z.string(),
+              max_score: z.number(),
+            })
+          ),
         }),
       })
     )
     .mutation(async ({ input }) => {
       const { target, data } = input;
-      await prisma.contest.update({
-        where: target,
-        data: {
-          challenges: {
-            deleteMany: {},
+      const { challenges: originalChallenges } =
+        await prisma.contest.findUniqueOrThrow({
+          where: target,
+          select: {
+            challenges: true,
           },
-        },
-      });
+        });
+
+      await Promise.all(
+        originalChallenges.map(async (challenge) => {
+          const newData = data.challenges.find(
+            (x) => x.challenge_id === challenge.challenge_id
+          );
+          if (newData) {
+            await prisma.contestChallenge.update({
+              where: {
+                challenge_id_contest_id: {
+                  challenge_id: challenge.challenge_id,
+                  contest_id: challenge.contest_id,
+                },
+              },
+              data: newData,
+            });
+          } else {
+            await prisma.contestChallenge.delete({
+              where: {
+                challenge_id_contest_id: {
+                  challenge_id: challenge.challenge_id,
+                  contest_id: challenge.contest_id,
+                },
+              },
+            });
+          }
+        })
+      );
+
+      data.challenges = data.challenges.filter(
+        (challenge) =>
+          !originalChallenges.find(
+            (x) => x.challenge_id === challenge.challenge_id
+          )
+      );
+
       await prisma.contest.update({
         where: target,
         data: {
           challenges: {
-            create: data.challenges,
+            create: data.challenges.map((x) => ({
+              challenge: { connect: { id: x.challenge_id } },
+              max_score: x.max_score,
+            })),
           },
           ...data.contest,
         },

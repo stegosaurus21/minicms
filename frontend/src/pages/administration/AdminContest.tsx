@@ -68,10 +68,7 @@ export const AdminContest = () => {
         target: { id: paramContestId },
         data: {
           contest: data,
-          challenges: data.challenges.map((x) => ({
-            challenge: { connect: { id: x.challenge_id } },
-            max_score: x.max_score,
-          })),
+          challenges: data.challenges,
         },
       });
       utils.contest.invalidate();
