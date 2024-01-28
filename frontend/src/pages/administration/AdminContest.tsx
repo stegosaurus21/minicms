@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import {
   Button,
+  ButtonGroup,
   Col,
   Container,
   Form,
@@ -28,6 +29,8 @@ import {
   NewChallengeModal,
 } from "~components/Administration/NewChallengeModal";
 import { toast } from "react-toastify";
+import { FaPencil, FaTrash } from "react-icons/fa6";
+import { IconButton } from "~components/IconButton";
 
 type ContestData = inferRouterOutputs<AppRouter>["contest"]["getAdmin"];
 
@@ -168,6 +171,8 @@ export const AdminContest = () => {
               <thead>
                 <tr>
                   <th>Challenges</th>
+                  <th>Max Score</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -178,34 +183,53 @@ export const AdminContest = () => {
                     <>
                       {value.length === 0 && (
                         <tr>
-                          <td>This contest has no challenges yet.</td>
+                          <td colSpan={3}>
+                            This contest has no challenges yet.
+                          </td>
                         </tr>
                       )}
-                      {value.map(({ challenge_id }) => {
-                        console.log(challenge_id);
+                      {value.map(({ challenge_id }, i) => {
                         return (
                           <tr>
                             <td>
-                              <span>
-                                {`${
-                                  queryChallenges.data.find(
-                                    (x) => x.id === challenge_id
-                                  )?.title
-                                } (${challenge_id})`}
-                              </span>
-                              <Button
-                                className="ms-4"
-                                onClick={() => {
-                                  setValue(
-                                    "challenges",
-                                    getValues("challenges").filter(
-                                      (x) => x.challenge_id !== challenge_id
-                                    )
-                                  );
-                                }}
-                              >
-                                Remove
-                              </Button>
+                              {`${
+                                queryChallenges.data.find(
+                                  (x) => x.id === challenge_id
+                                )?.title
+                              } (${challenge_id})`}
+                            </td>
+                            <td>
+                              <Form.Control
+                                required
+                                type="number"
+                                {...register(`challenges.${i}.max_score`, {
+                                  valueAsNumber: true,
+                                })}
+                              />
+                            </td>
+                            <td>
+                              <ButtonGroup>
+                                <IconButton
+                                  icon={FaPencil}
+                                  onClick={() => {
+                                    navigate(
+                                      `/admin/challenge/${challenge_id}`
+                                    );
+                                  }}
+                                />
+                                <IconButton
+                                  icon={FaTrash}
+                                  variant="outline-danger"
+                                  onClick={() => {
+                                    setValue(
+                                      "challenges",
+                                      getValues("challenges").filter(
+                                        (x) => x.challenge_id !== challenge_id
+                                      )
+                                    );
+                                  }}
+                                />
+                              </ButtonGroup>
                             </td>
                           </tr>
                         );
