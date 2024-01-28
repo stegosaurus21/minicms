@@ -1,6 +1,6 @@
 import { inferRouterOutputs } from "@trpc/server";
 import { Controller, useForm } from "react-hook-form";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { trpc } from "~utils/trpc";
 import { AppRouter } from "../../../../backend/src/app";
 import {
@@ -17,7 +17,6 @@ import {
   EditTestModal,
   TestData,
 } from "~components/Administration/EditTestModal";
-import { toast } from "react-toastify";
 
 export type ChallengeData =
   inferRouterOutputs<AppRouter>["challenge"]["getAdmin"];
