@@ -6,17 +6,27 @@ import { AppRouter } from "../../../../backend/src/app";
 import {
   ArrayElement,
   assertQuerySuccess,
+  parseMemory,
   refreshToast,
   useNavigateShim,
 } from "~utils/helper";
 import ErrorPage, { error, handleError } from "~components/Error";
-import { Accordion, Button, Container, Form, Table } from "react-bootstrap";
+import {
+  Accordion,
+  Button,
+  ButtonGroup,
+  Container,
+  Form,
+  Table,
+} from "react-bootstrap";
 import style from "../../styles.module.css";
 import { useState } from "react";
 import {
   EditTestModal,
   TestData,
 } from "~components/Administration/EditTestModal";
+import { IconButton } from "~components/IconButton";
+import { FaCheck, FaPencil, FaPlus, FaTrash, FaXmark } from "react-icons/fa6";
 
 export type ChallengeData =
   inferRouterOutputs<AppRouter>["challenge"]["getAdmin"];
@@ -115,6 +125,22 @@ export const AdminChallenge = () => {
     setEditingTestData(newTest);
   }
 
+  function removeTask(task: TaskData) {
+    setValue(
+      `tasks`,
+      getValues(`tasks`).filter((x) => x.task_number !== task.task_number)
+    );
+  }
+
+  function removeTest(task: TaskData, test: TestData) {
+    setValue(
+      `tasks.${task.task_number}.tests`,
+      getValues(`tasks.${task.task_number}.tests`).filter(
+        (x) => x.test_number !== test.test_number
+      )
+    );
+  }
+
   try {
     assertQuerySuccess(queryUser, "ERR_AUTH");
   } catch (e) {
@@ -183,6 +209,7 @@ export const AdminChallenge = () => {
             name={"tasks"}
             render={({ field: { value: tasks } }) => (
               <Accordion
+                className="mt-4"
                 alwaysOpen
                 defaultActiveKey={tasks.map((x) => x.task_number.toString())}
               >
@@ -194,20 +221,57 @@ export const AdminChallenge = () => {
                       return (
                         <Accordion.Item eventKey={task.task_number.toString()}>
                           <Accordion.Header>
-                            {`Task ${task.task_number + 1}`}
+                            {`Task ${task.task_number + 1} (${
+                              task.tests.length
+                            } tests)`}
                           </Accordion.Header>
                           <Accordion.Body>
-                            <Button
-                              onClick={() => {
-                                addTest(task);
-                              }}
+                            <Form.Label>Task weight</Form.Label>
+                            <Form.Control
+                              required
+                              className="w-75"
+                              type="number"
+                              min={1}
+                              max={100}
+                              {...register(`tasks.${task.task_number}.weight`)}
+                            />
+                            <Form.Label>Task type</Form.Label>
+                            <Form.Select
+                              className="w-75"
+                              {...register(`tasks.${task.task_number}.type`)}
                             >
-                              Add test
+                              <option value="INDIVIDUAL">
+                                Individually scored tests
+                              </option>
+                              <option value="BATCH">
+                                Tests batch scored as a task
+                              </option>
+                            </Form.Select>
+                            <Button className="mt-4" variant="danger">
+                              Delete task
                             </Button>
-                            <Table bordered>
+                            <Table bordered className="mt-4">
                               <thead>
                                 <tr>
-                                  <th>Tasks</th>
+                                  <th>
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 8,
+                                      }}
+                                    >
+                                      <span>Tests</span>
+                                      <IconButton
+                                        icon={FaPlus}
+                                        onClick={() => addTest(task)}
+                                      />
+                                    </div>
+                                  </th>
+                                  <th>Input</th>
+                                  <th>Output</th>
+                                  <th>Example</th>
+                                  <th>Actions</th>
                                 </tr>
                               </thead>
                               <Controller
@@ -216,21 +280,66 @@ export const AdminChallenge = () => {
                                 render={({ field: { value: tests } }) => (
                                   <tbody>
                                     {tests.map((test) => (
-                                      <tr>
-                                        <td
-                                          onClick={() => {
-                                            setEditingTask(task.task_number);
-                                            setEditingTestData(test);
-                                          }}
-                                        >
-                                          {test.test_number}
-                                        </td>
-                                      </tr>
+                                      <Controller
+                                        control={control}
+                                        name={`tasks.${task.task_number}.tests.${test.test_number}`}
+                                        render={({
+                                          field: { value: test },
+                                        }) => (
+                                          <tr>
+                                            <td>{test.test_number}</td>
+                                            <td>
+                                              {parseMemory(
+                                                test.input.length / 1000
+                                              )}
+                                            </td>
+                                            <td>
+                                              {parseMemory(
+                                                test.output.length / 1000
+                                              )}
+                                            </td>
+                                            <td>
+                                              {test.is_example ? (
+                                                <FaCheck />
+                                              ) : (
+                                                <FaXmark />
+                                              )}
+                                            </td>
+                                            <td>
+                                              <ButtonGroup>
+                                                <IconButton
+                                                  icon={FaPencil}
+                                                  onClick={() => {
+                                                    setEditingTask(
+                                                      task.task_number
+                                                    );
+                                                    setEditingTestData(test);
+                                                  }}
+                                                />
+                                                <IconButton
+                                                  variant="outline-danger"
+                                                  icon={FaTrash}
+                                                  onClick={() =>
+                                                    removeTest(task, test)
+                                                  }
+                                                />
+                                              </ButtonGroup>
+                                            </td>
+                                          </tr>
+                                        )}
+                                      />
                                     ))}
                                   </tbody>
                                 )}
                               />
                             </Table>
+                            <Button
+                              onClick={() => {
+                                addTest(task);
+                              }}
+                            >
+                              Add test
+                            </Button>
                           </Accordion.Body>
                         </Accordion.Item>
                       );
@@ -243,6 +352,7 @@ export const AdminChallenge = () => {
           <br />
           <Button type="submit">Save</Button>
         </Form>
+        <br />
       </Container>
     </>
   );
