@@ -21,16 +21,21 @@ import {
 } from "react-bootstrap";
 import style from "../../styles.module.css";
 import { useState } from "react";
-import {
-  EditTestModal,
-  TestData,
-} from "~components/Administration/EditTestModal";
+import { EditTestModal } from "~components/Administration/EditTestModal";
 import { IconButton } from "~components/IconButton";
 import { FaCheck, FaPencil, FaPlus, FaTrash, FaXmark } from "react-icons/fa6";
 
 export type ChallengeData =
   inferRouterOutputs<AppRouter>["challenge"]["getAdmin"];
 export type TaskData = ArrayElement<ChallengeData["tasks"]>;
+export type TestData = ArrayElement<
+  ArrayElement<ChallengeData["tasks"]>["tests"]
+>;
+export type EditData = {
+  task: TaskData;
+  test: TestData;
+  isNew: boolean;
+};
 
 export const AdminChallenge = () => {
   const params = useParams();
@@ -54,17 +59,13 @@ export const AdminChallenge = () => {
 
   const { control, register, getValues, setValue, handleSubmit } =
     useForm<ChallengeData>({
-      values: queryChallenge.data,
+      defaultValues: queryChallenge.data,
       resetOptions: {
         keepDirtyValues: true,
-        keepErrors: true,
       },
     });
 
-  const [editingTask, setEditingTask] = useState<number>(0);
-  const [editingTestData, setEditingTestData] = useState<TestData | undefined>(
-    undefined
-  );
+  const [editingData, setEditingData] = useState<EditData | undefined>();
 
   async function submitForm(data: ChallengeData) {
     try {
@@ -94,35 +95,59 @@ export const AdminChallenge = () => {
     }
   }
 
-  function updateTest(data: TestData) {
-    setValue(`tasks.${editingTask}.tests.${data.test_number}`, data);
-    setEditingTestData(undefined);
+  function taskIndex(task: TaskData | undefined) {
+    if (!task) throw new Error();
+    return getValues(`tasks`).findIndex(
+      (x) => x.task_number === task.task_number
+    );
+  }
+
+  function testIndex(task: TaskData | undefined, test: TestData) {
+    if (!task) throw new Error();
+    return getValues(`tasks.${taskIndex(task)}.tests`).findIndex(
+      (x) => x.test_number === test.test_number
+    );
+  }
+
+  function updateTest(data: EditData) {
+    setValue(
+      `tasks.${taskIndex(data.task)}.tests.${testIndex(data.task, data.test)}`,
+      data.test
+    );
+    setEditingData(undefined);
   }
 
   function addTask() {
+    const currentTasks = getValues("tasks");
+    const newTaskNumber = currentTasks.length
+      ? currentTasks[currentTasks.length - 1].task_number + 1
+      : 0;
     setValue("tasks", [
-      ...getValues("tasks"),
+      ...currentTasks,
       {
         type: "INDIVIDUAL",
         weight: 1,
-        task_number: getValues("tasks").length,
+        task_number: newTaskNumber,
         tests: [],
       },
     ]);
   }
 
   function addTest(task: TaskData) {
+    const currentTests = getValues(`tasks.${taskIndex(task)}.tests`);
+    const newTestNumber = currentTests.length
+      ? currentTests[currentTests.length - 1].test_number + 1
+      : 0;
     const newTest = {
-      test_number: getValues(`tasks.${task.task_number}.tests`).length,
+      test_number: newTestNumber,
       input: "",
       output: "",
       comment: "",
       explanation: "",
       is_example: false,
     };
-    setValue(`tasks.${task.task_number}.tests`, [...task.tests, newTest]);
-    setEditingTask(task.task_number);
-    setEditingTestData(newTest);
+    setValue(`tasks.${taskIndex(task)}.tests`, [...task.tests, newTest]);
+    setEditingData({ task: task, test: newTest, isNew: true });
   }
 
   function removeTask(task: TaskData) {
@@ -134,8 +159,8 @@ export const AdminChallenge = () => {
 
   function removeTest(task: TaskData, test: TestData) {
     setValue(
-      `tasks.${task.task_number}.tests`,
-      getValues(`tasks.${task.task_number}.tests`).filter(
+      `tasks.${taskIndex(task)}.tests`,
+      getValues(`tasks.${taskIndex(task)}.tests`).filter(
         (x) => x.test_number !== test.test_number
       )
     );
@@ -158,10 +183,19 @@ export const AdminChallenge = () => {
   }
 
   if (getValues("tasks") === undefined) return <></>;
-
+  console.log(editingData);
   return (
     <>
-      <EditTestModal data={editingTestData} setTestData={updateTest} />
+      {editingData && (
+        <EditTestModal
+          data={editingData}
+          deleteTest={(data) => {
+            removeTest(data.task, data.test);
+            setEditingData(undefined);
+          }}
+          updateTest={updateTest}
+        />
+      )}
       <Container>
         <span
           className={style.returnLink}
@@ -213,10 +247,10 @@ export const AdminChallenge = () => {
                 alwaysOpen
                 defaultActiveKey={tasks.map((x) => x.task_number.toString())}
               >
-                {tasks.map((task) => (
+                {tasks.map((_, i) => (
                   <Controller
                     control={control}
-                    name={`tasks.${task.task_number}`}
+                    name={`tasks.${i}`}
                     render={({ field: { value: task } }) => {
                       return (
                         <Accordion.Item eventKey={task.task_number.toString()}>
@@ -233,12 +267,12 @@ export const AdminChallenge = () => {
                               type="number"
                               min={1}
                               max={100}
-                              {...register(`tasks.${task.task_number}.weight`)}
+                              {...register(`tasks.${i}.weight`)}
                             />
                             <Form.Label>Task type</Form.Label>
                             <Form.Select
                               className="w-75"
-                              {...register(`tasks.${task.task_number}.type`)}
+                              {...register(`tasks.${i}.type`)}
                             >
                               <option value="INDIVIDUAL">
                                 Individually scored tests
@@ -247,7 +281,11 @@ export const AdminChallenge = () => {
                                 Tests batch scored as a task
                               </option>
                             </Form.Select>
-                            <Button className="mt-4" variant="danger">
+                            <Button
+                              className="mt-4"
+                              variant="danger"
+                              onClick={() => removeTask(task)}
+                            >
                               Delete task
                             </Button>
                             <Table bordered className="mt-4">
@@ -276,57 +314,60 @@ export const AdminChallenge = () => {
                               </thead>
                               <Controller
                                 control={control}
-                                name={`tasks.${task.task_number}.tests`}
+                                name={`tasks.${i}.tests`}
                                 render={({ field: { value: tests } }) => (
                                   <tbody>
-                                    {tests.map((test) => (
+                                    {tests.map((_, j) => (
                                       <Controller
                                         control={control}
-                                        name={`tasks.${task.task_number}.tests.${test.test_number}`}
+                                        name={`tasks.${i}.tests.${j}`}
                                         render={({
                                           field: { value: test },
-                                        }) => (
-                                          <tr>
-                                            <td>{test.test_number}</td>
-                                            <td>
-                                              {parseMemory(
-                                                test.input.length / 1000
-                                              )}
-                                            </td>
-                                            <td>
-                                              {parseMemory(
-                                                test.output.length / 1000
-                                              )}
-                                            </td>
-                                            <td>
-                                              {test.is_example ? (
-                                                <FaCheck />
-                                              ) : (
-                                                <FaXmark />
-                                              )}
-                                            </td>
-                                            <td>
-                                              <ButtonGroup>
-                                                <IconButton
-                                                  icon={FaPencil}
-                                                  onClick={() => {
-                                                    setEditingTask(
-                                                      task.task_number
-                                                    );
-                                                    setEditingTestData(test);
-                                                  }}
-                                                />
-                                                <IconButton
-                                                  variant="outline-danger"
-                                                  icon={FaTrash}
-                                                  onClick={() =>
-                                                    removeTest(task, test)
-                                                  }
-                                                />
-                                              </ButtonGroup>
-                                            </td>
-                                          </tr>
-                                        )}
+                                        }) => {
+                                          return (
+                                            <tr>
+                                              <td>{test.test_number}</td>
+                                              <td>
+                                                {parseMemory(
+                                                  test.input.length / 1000
+                                                )}
+                                              </td>
+                                              <td>
+                                                {parseMemory(
+                                                  test.output.length / 1000
+                                                )}
+                                              </td>
+                                              <td>
+                                                {test.is_example ? (
+                                                  <FaCheck />
+                                                ) : (
+                                                  <FaXmark />
+                                                )}
+                                              </td>
+                                              <td>
+                                                <ButtonGroup>
+                                                  <IconButton
+                                                    icon={FaPencil}
+                                                    onClick={() => {
+                                                      setEditingData({
+                                                        task: task,
+                                                        test: test,
+                                                        isNew: false,
+                                                      });
+                                                    }}
+                                                  />
+                                                  <IconButton
+                                                    variant="outline-danger"
+                                                    icon={FaTrash}
+                                                    onClick={() =>
+                                                      removeTest(task, test)
+                                                    }
+                                                  />
+                                                </ButtonGroup>
+                                              </td>
+                                            </tr>
+                                          );
+                                        }}
                                       />
                                     ))}
                                   </tbody>

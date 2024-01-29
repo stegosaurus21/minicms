@@ -1,24 +1,31 @@
 import { Button, Form, Modal } from "react-bootstrap";
-import { SubmitHandler, useForm } from "react-hook-form";
-import { ChallengeData } from "~pages/administration/AdminChallenge";
-import { ArrayElement } from "~utils/helper";
-
-export type TestData = ArrayElement<
-  ArrayElement<ChallengeData["tasks"]>["tests"]
->;
+import { useForm } from "react-hook-form";
+import { EditData, TestData } from "~pages/administration/AdminChallenge";
 
 export const EditTestModal = (props: {
-  data: TestData | undefined;
-  setTestData: SubmitHandler<TestData>;
+  data: EditData;
+  deleteTest: (data: EditData) => void;
+  updateTest: (data: EditData) => void;
 }) => {
   const { register, handleSubmit } = useForm<TestData>({
-    values: props.data,
+    values: props.data.test,
   });
+
+  function closeModal() {
+    if (props.data.isNew) props.deleteTest(props.data);
+    else props.updateTest(props.data);
+  }
+
   return (
-    <Modal show={props.data !== undefined}>
-      <Modal.Header>Edit test</Modal.Header>
+    <Modal show onHide={closeModal} backdrop="static">
+      <Modal.Header closeButton>Edit test</Modal.Header>
       <Modal.Body>
-        <Form onSubmit={handleSubmit(props.setTestData)}>
+        <Form
+          onSubmit={handleSubmit((data) => {
+            const result = { ...props.data, test: data };
+            props.updateTest(result);
+          })}
+        >
           <Form.Label>Input</Form.Label>
           <Form.Control
             required
@@ -59,7 +66,12 @@ export const EditTestModal = (props: {
             test cases.
           </Form.Text>
           <br />
-          <Button type="submit">Save</Button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Button type="submit">Save</Button>
+            <Button variant="danger" onClick={closeModal}>
+              Cancel
+            </Button>
+          </div>
         </Form>
       </Modal.Body>
     </Modal>
