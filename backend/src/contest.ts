@@ -63,7 +63,7 @@ export const contestRouter = router({
     const { contest } = input;
     const { uId } = ctx;
 
-    const result = await prisma.contest.findUniqueOrThrow({
+    const contestObj = await prisma.contest.findUniqueOrThrow({
       where: { id: contest },
       include: {
         challenges: {
@@ -75,26 +75,42 @@ export const contestRouter = router({
                 title: true,
               },
             },
-            submissions: {
-              where: {
-                owner_id: uId,
-              },
-            },
           },
         },
       },
     });
 
+    const submissions = await prisma.submission.findMany({
+      where: { contest_id: contest, owner_id: uId },
+    });
+
+    submissions.forEach(
+      (submission) =>
+        (submission.score =
+          (submission.score || 0) *
+          (contestObj.challenges.find(
+            (x) => x.challenge.id === submission.challenge_id
+          )?.max_score || 100))
+    );
+
     const canViewContest =
       uId !== undefined && (await checkContestAuth(uId, contest)).joined;
     if (!canViewContest) {
-      result.challenges.forEach(({ challenge }, i) => {
+      contestObj.challenges.forEach(({ challenge }, i) => {
         challenge.title = `Challenge ${i + 1}`;
         challenge.id = "hidden";
       });
     }
 
-    console.log(result);
+    const result = {
+      ...contestObj,
+      challenges: contestObj.challenges.map((challenge) => ({
+        ...challenge,
+        submissions: submissions.filter(
+          (x) => x.challenge_id === challenge.challenge.id
+        ),
+      })),
+    };
 
     return result;
   }),

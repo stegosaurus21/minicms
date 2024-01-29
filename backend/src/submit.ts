@@ -34,10 +34,12 @@ export async function submit(
         },
         challenge: {
           connect: {
-            challenge_id_contest_id: {
-              challenge_id: challenge,
-              contest_id: contest,
-            },
+            id: challenge,
+          },
+        },
+        contest: {
+          connect: {
+            id: contest,
           },
         },
         src: src,

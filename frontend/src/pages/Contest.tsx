@@ -60,7 +60,7 @@ const ContestPage = () => {
   }));
 
   sortedLeaderboard.sort((a, b) => a.total - b.total);
-
+  console.log(sortedLeaderboard);
   return (
     <>
       <Container>
@@ -167,38 +167,38 @@ const ContestPage = () => {
                   (sortedLeaderboard.findIndex(
                     (x) => x.name === user.data.username
                   ) !== -1 ? (
-                      <p>
+                    <p>
                       Your {showUnofficial ? "un" : ""}
                       official position is{" "}
-                        {`${
-                          sortedLeaderboard.findIndex(
-                            (x) => x.name === user.data.username
-                          ) + 1
-                        }${
-                          ["st", "nd", "rd", "th"][
-                            Math.min(
-                              4,
-                              sortedLeaderboard.findIndex(
-                                (x) => x.name === user.data.username
-                              ) % 10
-                            )
-                          ]
-                        }`}{" "}
+                      {`${
+                        sortedLeaderboard.findIndex(
+                          (x) => x.name === user.data.username
+                        ) + 1
+                      }${
+                        ["st", "nd", "rd", "th"][
+                          Math.min(
+                            4,
+                            sortedLeaderboard.findIndex(
+                              (x) => x.name === user.data.username
+                            ) % 10
+                          )
+                        ]
+                      }`}{" "}
                       out of {sortedLeaderboard.length} participant
-                        {sortedLeaderboard.length > 1 ? "s" : ""}.
-                      </p>
-                    ) : (
-                      <p>
+                      {sortedLeaderboard.length > 1 ? "s" : ""}.
+                    </p>
+                  ) : (
+                    <p>
                       You{" "}
-                        {contest.data.end_time === null ||
+                      {contest.data.end_time === null ||
                       new Date() < contest.data.end_time ||
                       showUnofficial
-                          ? "are"
-                          : "were"}{" "}
+                        ? "are"
+                        : "were"}{" "}
                       not a{showUnofficial ? "" : "n official"} participant in
                       this contest.
-                      </p>
-                    ))}
+                    </p>
+                  ))}
                 <ContestLeaderboard
                   showUnofficial={showUnofficial}
                   username={user.data.username}

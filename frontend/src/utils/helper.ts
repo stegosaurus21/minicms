@@ -64,7 +64,7 @@ export function styleScore(
 }
 
 export function styleStatus(status: string | undefined, pre?: string) {
-  if (status === "Checking" || status === undefined)
+  if (status === "" || status === undefined)
     return `${pre || ""}body text-body`;
   if (status === "Accepted") return `${pre || ""}success text-light`;
   return `${pre || ""}danger text-light`;

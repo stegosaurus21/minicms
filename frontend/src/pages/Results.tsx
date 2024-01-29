@@ -64,12 +64,18 @@ const Results = () => {
     {
       submission: paramSubmissionName,
     },
-    { trpc: { context: { skipBatch: true } } }
+    {
+      enabled: querySubmission.isSuccess,
+      trpc: { context: { skipBatch: true } },
+    }
   );
 
   const [results, setResults] = useState<Map<number, Map<number, TestResult>>>(
     new Map()
   );
+  // This is terrible but I genuinely think it's the best way of going about this?
+  const [resultsDirty, setResultsDirty] = useState<number>(0);
+
   const [compileOutput, setCompileOutput] = useState<string>("");
 
   useEffect(() => {
@@ -79,19 +85,20 @@ const Results = () => {
     queryChallenge.data.challenge.tasks.forEach((task) => {
       newMap.set(task.task_number, new Map<number, TestResult>());
       task.tests.forEach((test) =>
-        newMap.get(test.test_number)?.set(test.test_number, {
+        newMap.get(task.task_number)?.set(test.test_number, {
           task_number: task.task_number,
           test_number: test.test_number,
           token: "",
           time: 0,
           memory: 0,
-          status: "Judging",
+          status: "",
           compile_output: "",
         })
       );
     });
 
     setResults(newMap);
+    setResultsDirty((x) => x + 1);
 
     queryChallenge.data.challenge.tasks.forEach((task) =>
       task.tests.forEach(async (test) => {
@@ -105,6 +112,7 @@ const Results = () => {
           old.get(task.task_number)?.set(test.test_number, result);
           return old;
         });
+        setResultsDirty((x) => x + 1);
       })
     );
   }, [queryChallenge.isSuccess]);
@@ -157,10 +165,10 @@ const Results = () => {
       results.get(task.task_number)?.values() || []
     );
 
-    if (
-      taskResults.find((x) => x.status === "Judging") ||
-      taskResults.length === 0
-    )
+    console.log(task.task_number);
+    console.log(taskResults);
+
+    if (taskResults.find((x) => x.status === "") || taskResults.length === 0)
       return null;
 
     const acceptedTasks = taskResults.filter(
@@ -190,8 +198,8 @@ const Results = () => {
           <Badge
             bg={styleScore(queryScore.data, queryChallenge.data.max_score)}
           >{`${round2dp(queryScore.data)}/${
-              queryChallenge.data.max_score
-            }`}</Badge>
+            queryChallenge.data.max_score
+          }`}</Badge>
         ) : (
           <Spinner as="span" animation="border"></Spinner>
         )}
@@ -238,8 +246,8 @@ const Results = () => {
                     <Badge
                       bg={styleScore(subtaskScore(task), subtaskMaxScore(task))}
                     >{`${round2dp(subtaskScore(task))}/${subtaskMaxScore(
-                        task
-                      )}`}</Badge>
+                      task
+                    )}`}</Badge>
                   ) : (
                     <Spinner as="span" size="sm" animation="border"></Spinner>
                   )}
@@ -259,6 +267,7 @@ const Results = () => {
                     {Array.from(results.get(task.task_number)?.values() || [])
                       .toSorted((a, b) => a.test_number - b.test_number)
                       .map((result) => {
+                        console.log(result);
                         return (
                           <tr>
                             <td>{`${result.test_number + 1}`}</td>
@@ -270,11 +279,7 @@ const Results = () => {
                                 ? parseMemory(result.memory) || ""
                                 : ""
                             }`}</td>
-                            <td
-                              className={`bg-${styleStatus(
-                                result.status || "Judging"
-                              )}`}
-                            >
+                            <td className={`bg-${styleStatus(result.status)}`}>
                               {result.status ? (
                                 result.status
                               ) : (

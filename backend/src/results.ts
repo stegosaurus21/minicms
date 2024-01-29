@@ -100,7 +100,7 @@ async function getSubmissionChallenge(submission: string): Promise<string> {
         select: { challenge: true },
         where: { token: submission },
       })
-    ).challenge.challenge_id;
+    ).challenge.id;
   } catch (err) {
     if (err instanceof PrismaClientKnownRequestError) {
       if (err.code === "P2025") {
@@ -181,10 +181,21 @@ export async function checkSubmissionExists(submission: string) {
 
 async function getResultInternal(submission: string) {
   try {
-    return await prisma.submission.findUniqueOrThrow({
-      select: { score: true },
+    const submissionObj = await prisma.submission.findUniqueOrThrow({
+      select: { score: true, challenge_id: true, contest_id: true },
       where: { token: submission },
     });
+    const { max_score } = await prisma.contestChallenge.findUniqueOrThrow({
+      select: { max_score: true },
+      where: {
+        challenge_id_contest_id: {
+          challenge_id: submissionObj.challenge_id,
+          contest_id: submissionObj.contest_id,
+        },
+      },
+    });
+    if (submissionObj.score === null) return { score: null };
+    return { score: submissionObj.score * max_score };
   } catch (e) {
     if (e instanceof PrismaClientKnownRequestError) {
       if (e.code === "P2025") {
@@ -257,44 +268,43 @@ export async function processResult(submission: string) {
     select: {
       challenge: {
         select: {
-          challenge: {
-            select: {
-              tasks: true,
-            },
-          },
-          max_score: true,
+          tasks: true,
         },
       },
       results: {
         select: {
           status: true,
+          task_number: true,
         },
       },
     },
     where: { token: submission },
   });
 
-  const { challenge, max_score } = submission_data.challenge;
+  const challenge = submission_data.challenge;
   const { results } = submission_data;
 
   let total_weight = 0;
   let submission_credit = 0;
   challenge.tasks.forEach((task) => {
     total_weight += task.weight;
+    const taskResults = results.filter(
+      (x) => x.task_number === task.task_number
+    );
     switch (task.type) {
       case "BATCH":
-        if (results.find((x) => x.status !== "Accepted") === undefined)
+        if (taskResults.find((x) => x.status !== "Accepted") === undefined)
           submission_credit += task.weight;
         break;
       case "INDIVIDUAL":
         submission_credit +=
           (task.weight *
-            results.filter((x) => x.status === "Accepted").length) /
-          results.length;
+            taskResults.filter((x) => x.status === "Accepted").length) /
+          taskResults.length;
     }
   });
 
-  const result = (max_score * submission_credit) / total_weight;
+  const result = submission_credit / total_weight;
 
   await prisma.submission.update({
     data: { score: result },
@@ -306,10 +316,9 @@ export async function processResult(submission: string) {
 }
 
 export async function getLeaderboard(contest: string) {
-  const contest_end = (await getContestInternal(contest)).end_time;
-  const challenges = (await getContestInternal(contest)).challenges.map(
-    (x) => x.challenge
-  );
+  const contest_config = await getContestInternal(contest);
+  const contest_end = contest_config.end_time;
+  const challenges = contest_config.challenges.map((x) => x.challenge);
   const challenge_map = challenges.reduce(
     (prev, next, i) => prev.set(next.id, i),
     new Map<string, number>()
@@ -319,6 +328,7 @@ export async function getLeaderboard(contest: string) {
     select: { user: { select: { username: true, id: true } }, time: true },
     where: { contest_id: contest },
   });
+
   const participant_map = participants.reduce(
     (prev, next) => prev.set(next.user.id, next.user.username),
     new Map<number, string>()
@@ -348,15 +358,25 @@ export async function getLeaderboard(contest: string) {
       by: ["owner_id", "challenge_id"],
       where: {
         contest_id: contest,
+        owner: {
+          admin: false,
+        },
       },
       _max: { score: true },
       _count: true,
     })
   ).forEach((item) => {
+    const max_score =
+      contest_config.challenges.find(
+        (x) => x.challenge_id === item.challenge_id
+      )?.max_score || 100;
     if (!challenge_map.has(item.challenge_id)) return;
     all[participant_map.get(item.owner_id) as string].results[
       challenge_map.get(item.challenge_id) as number
-    ] = { score: item._max.score || 0, count: item._count };
+    ] = {
+      score: (item._max.score || 0) * max_score,
+      count: item._count,
+    };
   });
 
   if (contest_end) {
@@ -365,18 +385,29 @@ export async function getLeaderboard(contest: string) {
         by: ["owner_id", "challenge_id"],
         where: {
           contest_id: contest,
+          owner: {
+            admin: false,
+          },
           time: { lt: contest_end },
         },
         _max: { score: true },
         _count: true,
       })
     ).forEach((item) => {
+      const max_score =
+        contest_config.challenges.find(
+          (x) => x.challenge_id === item.challenge_id
+        )?.max_score || 100;
       if (!challenge_map.has(item.challenge_id)) return;
       official[participant_map.get(item.owner_id) as string].results[
         challenge_map.get(item.challenge_id) as number
-      ] = { score: item._max.score || 0, count: item._count };
+      ] = {
+        score: (item._max.score || 0) * max_score,
+        count: item._count,
+      };
     });
   }
+  console.log(all);
   return {
     all: all,
     official: contest_end ? official : all,

@@ -182,19 +182,25 @@ export async function getChallengeResults(
     submissions: results.map((x, i) => ({
       time: x.time,
       token: x.token,
-      score: x.score,
+      score:
+        (x.score || 0) *
+        (contest_config.challenges.find((x) => x.challenge_id === challenge)
+          ?.max_score || 0),
       index: i,
       official: contest_config.end_time
         ? x.time <= contest_config.end_time
         : true,
     })),
-    score: results
-      .filter((x) => x.score)
-      .reduce(
-        (prev, next) =>
-          (next.score as number) > prev ? (next.score as number) : prev,
-        0
-      ),
+    score:
+      results
+        .filter((x) => x.score)
+        .reduce(
+          (prev, next) =>
+            (next.score as number) > prev ? (next.score as number) : prev,
+          0
+        ) *
+      (contest_config.challenges.find((x) => x.challenge_id === challenge)
+        ?.max_score || 100),
   };
 }
 
