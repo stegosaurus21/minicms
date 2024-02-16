@@ -58,6 +58,7 @@ export const challengeRouter = router({
               type: true,
               task_number: true,
               weight: true,
+              constraints: true,
             },
           },
         },
@@ -82,6 +83,7 @@ export const challengeRouter = router({
             description: true,
             input_format: true,
             output_format: true,
+            constraints: true,
             time_limit: true,
             memory_limit: true,
             tasks: {

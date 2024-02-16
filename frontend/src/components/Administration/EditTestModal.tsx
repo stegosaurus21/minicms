@@ -1,13 +1,16 @@
 import { Button, Form, Modal } from "react-bootstrap";
 import { useForm } from "react-hook-form";
+import { FaUpload } from "react-icons/fa6";
+import { IconButton } from "~components/IconButton";
 import { EditData, TestData } from "~pages/administration/AdminChallenge";
+import { uploadFile, uploadFileText } from "~utils/upload";
 
 export const EditTestModal = (props: {
   data: EditData;
   deleteTest: (data: EditData) => void;
   updateTest: (data: EditData) => void;
 }) => {
-  const { register, handleSubmit } = useForm<TestData>({
+  const { register, setValue, handleSubmit } = useForm<TestData>({
     values: props.data.test,
   });
 
@@ -26,15 +29,31 @@ export const EditTestModal = (props: {
             props.updateTest(result);
           })}
         >
-          <Form.Label>Input</Form.Label>
+          <IconButton
+            label="Input"
+            icon={FaUpload}
+            onClick={async () => {
+              const text = await uploadFileText();
+              if (!text) return;
+              setValue("input", text, { shouldTouch: true });
+            }}
+          />
           <Form.Control
             required
             as="textarea"
             rows={6}
-            style={{ resize: "none", fontFamily: "monospace" }}
+            style={{ resize: "none", fontFamily: "monospace", marginBottom: 8 }}
             {...register("input")}
           />
-          <Form.Label>Output</Form.Label>
+          <IconButton
+            label="Output"
+            icon={FaUpload}
+            onClick={async () => {
+              const text = await uploadFileText();
+              if (!text) return;
+              setValue("output", text, { shouldTouch: true });
+            }}
+          />
           <Form.Control
             required
             as="textarea"

@@ -27,7 +27,7 @@ const app = express();
 export let judgeLanguages: JudgeLanguage[];
 let lastClear = Date.now();
 
-app.use(json());
+app.use(json({ limit: "10mb" }));
 app.use(cors());
 app.use(morgan("dev"));
 app.use(fileUpload({ createParentPath: true }));
@@ -51,7 +51,6 @@ export const judgeSecret = v4();
 app.put(
   `/callback/${judgeSecret}/:submission/:taskNum/:testNum/:timeSent`,
   async (req, res) => {
-    console.log("got????");
     if (parseInt(req.params.timeSent) < lastClear) return res.json();
     await judgeCallback(
       req.body,

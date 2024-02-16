@@ -1,10 +1,6 @@
 import { useState } from "react";
 import { Button, Container, Table, Form, Badge } from "react-bootstrap";
-import { ReactMarkdown } from "react-markdown/lib/react-markdown";
 import { useParams } from "react-router-dom";
-import rehypeKatex from "rehype-katex";
-import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
 import {
   assertQuerySuccess,
   parseMemory,
@@ -13,11 +9,11 @@ import {
   useNavigateShim,
 } from "utils/helper";
 import style from "../styles.module.css";
-import "katex/dist/katex.min.css";
 import FormCheckInput from "react-bootstrap/esm/FormCheckInput";
 import ChallengeSubmissions from "components/Challenges/ChallengeSubmissions";
 import { trpc } from "utils/trpc";
 import { error, handleError } from "components/Error";
+import { Markdown } from "~components/Markdown";
 
 const Challenge = () => {
   const navigate = useNavigateShim();
@@ -96,6 +92,7 @@ const Challenge = () => {
   const pastSubmissions = results.data.submissions;
   const score = results.data.score;
   const { challenge, max_score } = challengeQuery.data;
+  const totalWeight = challenge.tasks.reduce((p, n) => p + n.weight, 0);
 
   return (
     <>
@@ -153,30 +150,102 @@ const Challenge = () => {
             </Form>
           </div>
         }
-        <ReactMarkdown
-          remarkPlugins={[remarkMath, remarkGfm]}
-          rehypePlugins={[rehypeKatex]}
-          components={{
-            // Seems like the best way to do this
-            // eslint-disable-next-line no-unused-vars
-            table: ({ node, ...props }) => (
-              <Table className="w-75" bordered {...props}></Table>
-            ),
-            td: ({ children }) => (
-              <td>
-                <pre>
-                  <code>{children[0]}</code>
-                </pre>
-              </td>
-            ),
-          }}
-        >
-          {challenge.description +
-            "\n\n## Input\n\n" +
-            challenge.input_format +
-            "\n\n## Output\n\n" +
-            challenge.output_format}
-        </ReactMarkdown>
+        <Markdown
+          src={
+            challenge.description ||
+            "This challenge does not have a description."
+          }
+        />
+        {challenge.input_format && (
+          <>
+            <h2>Input</h2>
+            <Markdown src={challenge.input_format} />
+          </>
+        )}
+        {challenge.output_format && (
+          <>
+            <h2>Output</h2>
+            <Markdown src={challenge.output_format} />
+          </>
+        )}
+        {challenge.constraints && (
+          <>
+            <h2>Constraints</h2>
+            <Markdown src={challenge.constraints} />
+          </>
+        )}
+
+        {challenge.tests.length > 0 && (
+          <>
+            <h2>Examples</h2>
+            <Table className="w-75" bordered>
+              <tr>
+                <th>Input</th>
+                <th>Output</th>
+                <th>Explanation</th>
+              </tr>
+              {challenge.tests.map((x) => (
+                <tr>
+                  <td>
+                    <pre>
+                      <code>{x.input}</code>
+                    </pre>
+                  </td>
+                  <td>
+                    <pre>
+                      <code>{x.output}</code>
+                    </pre>
+                  </td>
+                  <td>
+                    {x.explanation ||
+                      "No explanation is provided for this example."}
+                  </td>
+                </tr>
+              ))}
+            </Table>
+          </>
+        )}
+        <h2>Scoring</h2>
+        <p>
+          Each test case will be marked as correct if your solution produces the
+          right output and incorrect otherwise.
+        </p>
+        {challenge.tasks.length == 1 ? (
+          <p>
+            Your score for the challenge is{" "}
+            {{
+              "INDIVIDUAL": "proportional to the number of correct tests",
+              "BATCH": "100% if all tests are correct and 0% otherwise",
+            }[challenge.tasks[0].type] ||
+              "proportional to the number of correct tests"}
+            .
+          </p>
+        ) : (
+          <>
+            <p>
+              There are {challenge.tasks.length} subtasks, which are scored as
+              follows:
+            </p>
+            <ul>
+              {challenge.tasks.map((x, i) => (
+                <>
+                  <li>
+                    Subtask {i + 1} -{" "}
+                    {round2dp((x.weight * max_score) / totalWeight)} points{" "}
+                    {"("}
+                    {x.tests.length}{" "}
+                    {{ "INDIVIDUAL": "independent", "BATCH": "batch" }[
+                      x.type
+                    ] || "independent"}{" "}
+                    task{x.tests.length > 1 && "s"}
+                    {")"}
+                  </li>
+                  {x.constraints && <Markdown src={x.constraints} />}
+                </>
+              ))}
+            </ul>
+          </>
+        )}
         {pastSubmissions !== null && (
           <>
             <h2>Previous submissions</h2>

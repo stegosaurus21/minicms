@@ -53,6 +53,7 @@ export const adminRouter = router({
           description: "",
           input_format: "",
           output_format: "",
+          constraints: "",
           time_limit: 1,
           memory_limit: 128 * 1024,
         },

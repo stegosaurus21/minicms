@@ -25,6 +25,7 @@ A simple contest management system powered by Judge0.
 - (In progress) Migrate problems to DB
 - Better token handling
 - Better logging
+- Make server handle unavailable judge more gracefully
 - Fix tests D:
 - Bundle with Judge0
 - Frontend and backend really should be separate images

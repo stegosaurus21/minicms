@@ -24,11 +24,6 @@ import style from "../../styles.module.css";
 import { DateTimeControl } from "~components/Administration/DateTimeControl";
 import { Typeahead } from "react-bootstrap-typeahead";
 import TypeaheadType from "react-bootstrap-typeahead/types/core/Typeahead";
-import {
-  ChallengeCreateData,
-  NewChallengeModal,
-} from "~components/Administration/NewChallengeModal";
-import { toast } from "react-toastify";
 import { FaPencil, FaTrash } from "react-icons/fa6";
 import { IconButton } from "~components/IconButton";
 

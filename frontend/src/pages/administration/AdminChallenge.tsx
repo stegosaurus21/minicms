@@ -1,5 +1,5 @@
 import { inferRouterOutputs } from "@trpc/server";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { useParams } from "react-router-dom";
 import { trpc } from "~utils/trpc";
 import { AppRouter } from "../../../../backend/src/app";
@@ -15,6 +15,7 @@ import {
   Accordion,
   Button,
   ButtonGroup,
+  ButtonToolbar,
   Container,
   Form,
   Table,
@@ -24,6 +25,15 @@ import { useState } from "react";
 import { EditTestModal } from "~components/Administration/EditTestModal";
 import { IconButton } from "~components/IconButton";
 import { FaCheck, FaPencil, FaPlus, FaTrash, FaXmark } from "react-icons/fa6";
+import {
+  TaskStructure,
+  UploadError,
+  parseZip,
+  uploadFile,
+  validateTask,
+} from "~utils/upload";
+import JSZip from "jszip";
+import { exportTask } from "~utils/export";
 
 export type ChallengeData =
   inferRouterOutputs<AppRouter>["challenge"]["getAdmin"];
@@ -57,13 +67,15 @@ export const AdminChallenge = () => {
 
   const mutateChallenge = trpc.admin.updateChallenge.useMutation();
 
-  const { control, register, getValues, setValue, handleSubmit } =
-    useForm<ChallengeData>({
-      defaultValues: queryChallenge.data,
-      resetOptions: {
-        keepDirtyValues: true,
-      },
-    });
+  const { control, register, setValue, handleSubmit } = useForm<ChallengeData>({
+    values: queryChallenge.data,
+    resetOptions: {
+      keepDirtyValues: true,
+    },
+  });
+  // Hacky, but necessary for my sanity right now
+  const values = useWatch({ control: control }) as ChallengeData;
+  console.log(values);
 
   const [editingData, setEditingData] = useState<EditData | undefined>();
 
@@ -97,14 +109,12 @@ export const AdminChallenge = () => {
 
   function taskIndex(task: TaskData | undefined) {
     if (!task) throw new Error();
-    return getValues(`tasks`).findIndex(
-      (x) => x.task_number === task.task_number
-    );
+    return values.tasks.findIndex((x) => x.task_number === task.task_number);
   }
 
   function testIndex(task: TaskData | undefined, test: TestData) {
     if (!task) throw new Error();
-    return getValues(`tasks.${taskIndex(task)}.tests`).findIndex(
+    return values.tasks[taskIndex(task)].tests.findIndex(
       (x) => x.test_number === test.test_number
     );
   }
@@ -118,7 +128,7 @@ export const AdminChallenge = () => {
   }
 
   function addTask() {
-    const currentTasks = getValues("tasks");
+    const currentTasks = values.tasks;
     const newTaskNumber = currentTasks.length
       ? currentTasks[currentTasks.length - 1].task_number + 1
       : 0;
@@ -129,12 +139,13 @@ export const AdminChallenge = () => {
         weight: 1,
         task_number: newTaskNumber,
         tests: [],
+        constraints: "",
       },
     ]);
   }
 
   function addTest(task: TaskData) {
-    const currentTests = getValues(`tasks.${taskIndex(task)}.tests`);
+    const currentTests = values.tasks[taskIndex(task)].tests;
     const newTestNumber = currentTests.length
       ? currentTests[currentTests.length - 1].test_number + 1
       : 0;
@@ -153,14 +164,36 @@ export const AdminChallenge = () => {
   function removeTask(task: TaskData) {
     setValue(
       `tasks`,
-      getValues(`tasks`).filter((x) => x.task_number !== task.task_number)
+      values.tasks.filter((x) => x.task_number !== task.task_number)
     );
+  }
+
+  async function uploadTask() {
+    const zip = await uploadFile();
+    if (!zip) return;
+    try {
+      const zipOutput = await parseZip(
+        await JSZip.loadAsync(zip),
+        TaskStructure
+      );
+      return await validateTask(zipOutput);
+    } catch (e) {
+      if (e instanceof UploadError) {
+        refreshToast("error", e.message, "task_upload_err");
+        return;
+      }
+      throw e;
+    }
+  }
+
+  function downloadTask(task: TaskData) {
+    exportTask(task);
   }
 
   function removeTest(task: TaskData, test: TestData) {
     setValue(
       `tasks.${taskIndex(task)}.tests`,
-      getValues(`tasks.${taskIndex(task)}.tests`).filter(
+      values.tasks[taskIndex(task)].tests.filter(
         (x) => x.test_number !== test.test_number
       )
     );
@@ -182,7 +215,7 @@ export const AdminChallenge = () => {
     return handleError(e);
   }
 
-  if (getValues("tasks") === undefined) return <></>;
+  if (values.tasks === undefined) return <></>;
   console.log(editingData);
   return (
     <>
@@ -214,182 +247,179 @@ export const AdminChallenge = () => {
           <Form.Control required type="text" {...register("title")} />
           <Form.Label>Description</Form.Label>
           <Form.Control
-            required
             as="textarea"
             rows={6}
             style={{ resize: "none" }}
             {...register("description")}
           />
-          <Form.Label>Input section</Form.Label>
+          <Form.Label>Input</Form.Label>
           <Form.Control
-            required
             as="textarea"
             rows={3}
             style={{ resize: "none" }}
             {...register("input_format")}
           />
-          <Form.Label>Output section</Form.Label>
+          <Form.Label>Output</Form.Label>
           <Form.Control
-            required
             as="textarea"
             rows={3}
             style={{ resize: "none" }}
             {...register("output_format")}
           />
+          <Form.Label>Constraints</Form.Label>
+          <Form.Control
+            as="textarea"
+            rows={3}
+            style={{ resize: "none" }}
+            {...register("constraints")}
+          />
           <h2>Tasks</h2>
           <Button onClick={addTask}>Add task</Button>
-          <Controller
-            control={control}
-            name={"tasks"}
-            render={({ field: { value: tasks } }) => (
-              <Accordion
-                className="mt-4"
-                alwaysOpen
-                defaultActiveKey={tasks.map((x) => x.task_number.toString())}
-              >
-                {tasks.map((_, i) => (
-                  <Controller
-                    control={control}
-                    name={`tasks.${i}`}
-                    render={({ field: { value: task } }) => {
-                      return (
-                        <Accordion.Item eventKey={task.task_number.toString()}>
-                          <Accordion.Header>
-                            {`Task ${task.task_number + 1} (${
-                              task.tests.length
-                            } tests)`}
-                          </Accordion.Header>
-                          <Accordion.Body>
-                            <Form.Label>Task weight</Form.Label>
-                            <Form.Control
-                              required
-                              className="w-75"
-                              type="number"
-                              min={1}
-                              max={100}
-                              {...register(`tasks.${i}.weight`)}
-                            />
-                            <Form.Label>Task type</Form.Label>
-                            <Form.Select
-                              className="w-75"
-                              {...register(`tasks.${i}.type`)}
-                            >
-                              <option value="INDIVIDUAL">
-                                Individually scored tests
-                              </option>
-                              <option value="BATCH">
-                                Tests batch scored as a task
-                              </option>
-                            </Form.Select>
-                            <Button
-                              className="mt-4"
-                              variant="danger"
-                              onClick={() => removeTask(task)}
-                            >
-                              Delete task
-                            </Button>
-                            <Table bordered className="mt-4">
-                              <thead>
-                                <tr>
-                                  <th>
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 8,
-                                      }}
-                                    >
-                                      <span>Tests</span>
-                                      <IconButton
-                                        icon={FaPlus}
-                                        onClick={() => addTest(task)}
-                                      />
-                                    </div>
-                                  </th>
-                                  <th>Input</th>
-                                  <th>Output</th>
-                                  <th>Example</th>
-                                  <th>Actions</th>
-                                </tr>
-                              </thead>
-                              <Controller
-                                control={control}
-                                name={`tasks.${i}.tests`}
-                                render={({ field: { value: tests } }) => (
-                                  <tbody>
-                                    {tests.map((_, j) => (
-                                      <Controller
-                                        control={control}
-                                        name={`tasks.${i}.tests.${j}`}
-                                        render={({
-                                          field: { value: test },
-                                        }) => {
-                                          return (
-                                            <tr>
-                                              <td>{test.test_number}</td>
-                                              <td>
-                                                {parseMemory(
-                                                  test.input.length / 1000
-                                                )}
-                                              </td>
-                                              <td>
-                                                {parseMemory(
-                                                  test.output.length / 1000
-                                                )}
-                                              </td>
-                                              <td>
-                                                {test.is_example ? (
-                                                  <FaCheck />
-                                                ) : (
-                                                  <FaXmark />
-                                                )}
-                                              </td>
-                                              <td>
-                                                <ButtonGroup>
-                                                  <IconButton
-                                                    icon={FaPencil}
-                                                    onClick={() => {
-                                                      setEditingData({
-                                                        task: task,
-                                                        test: test,
-                                                        isNew: false,
-                                                      });
-                                                    }}
-                                                  />
-                                                  <IconButton
-                                                    variant="outline-danger"
-                                                    icon={FaTrash}
-                                                    onClick={() =>
-                                                      removeTest(task, test)
-                                                    }
-                                                  />
-                                                </ButtonGroup>
-                                              </td>
-                                            </tr>
-                                          );
-                                        }}
-                                      />
-                                    ))}
-                                  </tbody>
-                                )}
-                              />
-                            </Table>
-                            <Button
-                              onClick={() => {
-                                addTest(task);
-                              }}
-                            >
-                              Add test
-                            </Button>
-                          </Accordion.Body>
-                        </Accordion.Item>
-                      );
-                    }}
+          <Accordion
+            className="mt-4"
+            alwaysOpen
+            defaultActiveKey={values.tasks.map((x) => x.task_number.toString())}
+          >
+            {values.tasks.map((task, i) => (
+              <Accordion.Item eventKey={task.task_number.toString()}>
+                <Accordion.Header>
+                  {`Task ${task.task_number + 1} (${task.tests.length} tests)`}
+                </Accordion.Header>
+                <Accordion.Body>
+                  <Form.Label>Task weight</Form.Label>
+                  <Form.Control
+                    required
+                    className="w-75"
+                    type="number"
+                    min={1}
+                    max={100}
+                    {...register(`tasks.${i}.weight`, { valueAsNumber: true })}
                   />
-                ))}
-              </Accordion>
-            )}
-          />
+                  <Form.Label>Task type</Form.Label>
+                  <Form.Select
+                    className="w-75"
+                    {...register(`tasks.${i}.type`)}
+                  >
+                    <option value="INDIVIDUAL">
+                      Individually scored tests
+                    </option>
+                    <option value="BATCH">Tests batch scored as a task</option>
+                  </Form.Select>
+                  <Form.Label>Task constraints</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={2}
+                    style={{ resize: "none" }}
+                    {...register(`tasks.${i}.constraints`)}
+                  />
+                  <ButtonToolbar style={{ gap: 8 }}>
+                    <ButtonGroup>
+                      <Button
+                        className="mt-4"
+                        onClick={async () => {
+                          const data = await uploadTask();
+                          if (data === undefined) return;
+                          const { config, tests } = data;
+                          setValue(`tasks.${i}`, {
+                            task_number: task.task_number,
+                            tests: tests.map((x, i) => ({
+                              input: x.input,
+                              test_number: i,
+                              output: x.output,
+                              is_example: false,
+                              explanation: "",
+                              comment: x.name,
+                            })),
+                            weight: config.weight,
+                            type: config.type,
+                            constraints: config.constraints,
+                          });
+                        }}
+                      >
+                        Upload task
+                      </Button>
+                      <Button
+                        className="mt-4"
+                        onClick={() => downloadTask(task)}
+                      >
+                        Download task
+                      </Button>
+                    </ButtonGroup>
+                    <ButtonGroup>
+                      <Button
+                        className="mt-4"
+                        variant="danger"
+                        onClick={() => removeTask(task)}
+                      >
+                        Delete task
+                      </Button>
+                    </ButtonGroup>
+                  </ButtonToolbar>
+                  <Table bordered className="mt-4">
+                    <thead>
+                      <tr>
+                        <th>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                            }}
+                          >
+                            <span>Tests</span>
+                            <IconButton
+                              icon={FaPlus}
+                              onClick={() => addTest(task)}
+                            />
+                          </div>
+                        </th>
+                        <th>Input</th>
+                        <th>Output</th>
+                        <th>Example</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {task.tests.map((test, j) => (
+                        <tr>
+                          <td>{test.test_number}</td>
+                          <td>{parseMemory(test.input.length / 1000)}</td>
+                          <td>{parseMemory(test.output.length / 1000)}</td>
+                          <td>{test.is_example ? <FaCheck /> : <FaXmark />}</td>
+                          <td>
+                            <ButtonGroup>
+                              <IconButton
+                                icon={FaPencil}
+                                onClick={() => {
+                                  setEditingData({
+                                    task: task,
+                                    test: test,
+                                    isNew: false,
+                                  });
+                                }}
+                              />
+                              <IconButton
+                                variant="outline-danger"
+                                icon={FaTrash}
+                                onClick={() => removeTest(task, test)}
+                              />
+                            </ButtonGroup>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </Table>
+                  <Button
+                    onClick={() => {
+                      addTest(task);
+                    }}
+                  >
+                    Add test
+                  </Button>
+                </Accordion.Body>
+              </Accordion.Item>
+            ))}
+          </Accordion>
           <br />
           <Button type="submit">Save</Button>
         </Form>

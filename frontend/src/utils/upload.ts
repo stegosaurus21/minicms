@@ -1,16 +1,14 @@
 export type ZipItemDefinition =
-  | ({ find: string | RegExp; optional?: boolean; default?: any } & (
+  | { find: string | RegExp; optional?: boolean; default?: any } & (
       | {
           type: "text";
         }
       | { type: "json"; shape: Zod.AnyZodObject }
-    ))
-  | {
-      type: "directory";
-      find: string;
-      optional?: boolean;
-      content: ZipItemDefinition[];
-    };
+      | {
+          type: "directory";
+          content: ZipItemDefinition[];
+        }
+    );
 
 export type ZipDefinition = ZipItemDefinition[];
 
@@ -26,10 +24,21 @@ export const TaskStructure: ZipDefinition = [
     shape: z.object({
       weight: z.optional(z.number()),
       type: z.optional(z.enum(["BATCH", "INDIVIDUAL"])),
+      examples: z.optional(
+        z.array(
+          z.union([
+            z.string(),
+            z.object({ name: z.string(), explanation: z.string() }),
+          ])
+        )
+      ),
+      constraints: z.optional(z.string()),
     }),
     default: {
       weight: 1,
       type: "INDIVIDUAL",
+      examples: [],
+      constraints: "",
     },
   },
   {
@@ -45,7 +54,12 @@ export const TaskStructure: ZipDefinition = [
 ];
 
 export type UploadTaskData = {
-  config: { weight: number; type: string };
+  config: {
+    weight: number;
+    type: string;
+    constraints: string;
+    examples: (string | { name: string; explanation: string })[];
+  };
   tests: { name: string; input: string; output: string }[];
 };
 
@@ -74,6 +88,17 @@ export async function validateTask(parsedZip: any) {
         `Output file "${x.name}" has no matching input file`
       );
   });
+  // Check that all examples match a test
+  result.config.examples.forEach((x) => {
+    let name: string;
+    if (typeof x === "string") name = x;
+    else name = x.name;
+    if (input.find((y) => name === y.name) === undefined)
+      throw new UploadTaskParseError(
+        "output",
+        `Example "${name}" has no matching test`
+      );
+  });
   // Convert inputs and outputs into correct format
   result.tests = input.map((x) => ({
     name: x.name,
@@ -82,6 +107,29 @@ export async function validateTask(parsedZip: any) {
   }));
   return result;
 }
+
+export const ChallengeStructure: ZipDefinition = [
+  {
+    type: "json",
+    find: "config.json",
+    shape: z.object({
+      id: z.string(),
+      time_limit: z.optional(z.number()),
+      memory_limit: z.optional(z.number()),
+      title: z.optional(z.string()),
+      description: z.optional(z.string()),
+      input_format: z.optional(z.string()),
+      output_format: z.optional(z.string()),
+      constraints: z.optional(z.string()),
+    }),
+  },
+  {
+    type: "directory",
+    find: "tasks",
+    optional: true,
+    content: [{ type: "directory", find: ".*", content: TaskStructure }],
+  },
+];
 
 export abstract class UploadError extends Error {
   constructor(path: string, leaf: string, message: string) {
@@ -242,16 +290,34 @@ export async function parseZip(
           }
           break;
         case "directory":
-          const folder = zip.folder(item.find);
-          if (folder === null) {
-            if (item.optional) return;
-            throw new UploadFolderNotFoundError(path, item.find);
+          if (typeof item.find === "string") {
+            const folder = zip.folder(item.find);
+            if (folder === null) {
+              if (item.optional) return;
+              throw new UploadFolderNotFoundError(path, item.find);
+            }
+            result[item.find] = await parseZip(
+              folder,
+              item.content,
+              `${path}${item.find}/`
+            );
+          } else {
+            const folders = zip.folder(item.find);
+            if (folders.length == 0) {
+              result[item.find.source] = [];
+              if (item.optional) return;
+              throw new UploadRegexNotFoundError(path, item.find.source);
+            }
+            result[item.find.source] = await Promise.all(
+              folders.map(async (x) =>
+                parseZip(
+                  zip.folder(x.name) || new JSZip(),
+                  item.content,
+                  `${path}${x.name}/`
+                )
+              )
+            );
           }
-          result[item.find] = await parseZip(
-            folder,
-            item.content,
-            `${path}${item.find}/`
-          );
           break;
       }
     })

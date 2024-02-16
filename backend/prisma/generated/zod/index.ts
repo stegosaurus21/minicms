@@ -24,9 +24,9 @@ export const ContestScalarFieldEnumSchema = z.enum(['id','title','start_time','e
 
 export const ContestChallengeScalarFieldEnumSchema = z.enum(['challenge_id','contest_id','max_score']);
 
-export const ChallengeScalarFieldEnumSchema = z.enum(['id','title','type','description','input_format','output_format','time_limit','memory_limit']);
+export const ChallengeScalarFieldEnumSchema = z.enum(['id','title','type','description','input_format','output_format','constraints','time_limit','memory_limit']);
 
-export const TaskScalarFieldEnumSchema = z.enum(['challenge_id','type','task_number','weight']);
+export const TaskScalarFieldEnumSchema = z.enum(['challenge_id','type','task_number','weight','constraints']);
 
 export const TestScalarFieldEnumSchema = z.enum(['test_number','is_example','challenge_id','task_number','comment','explanation','input','output']);
 
@@ -61,7 +61,7 @@ export const SubmissionSchema = z.object({
   src: z.string(),
   contest_id: z.string(),
   challenge_id: z.string(),
-  score: z.number().int().nullable(),
+  score: z.number().nullable(),
   time: z.coerce.date(),
 })
 
@@ -134,6 +134,7 @@ export const ChallengeSchema = z.object({
   description: z.string(),
   input_format: z.string(),
   output_format: z.string(),
+  constraints: z.string(),
   time_limit: z.number().int(),
   memory_limit: z.number().int(),
 })
@@ -149,6 +150,7 @@ export const TaskSchema = z.object({
   type: z.string(),
   task_number: z.number().int(),
   weight: z.number().int(),
+  constraints: z.string(),
 })
 
 export type Task = z.infer<typeof TaskSchema>
@@ -213,7 +215,8 @@ export const UserSelectSchema: z.ZodType<Prisma.UserSelect> = z.object({
 
 export const SubmissionIncludeSchema: z.ZodType<Prisma.SubmissionInclude> = z.object({
   owner: z.union([z.boolean(),z.lazy(() => UserArgsSchema)]).optional(),
-  challenge: z.union([z.boolean(),z.lazy(() => ContestChallengeArgsSchema)]).optional(),
+  challenge: z.union([z.boolean(),z.lazy(() => ChallengeArgsSchema)]).optional(),
+  contest: z.union([z.boolean(),z.lazy(() => ContestArgsSchema)]).optional(),
   results: z.union([z.boolean(),z.lazy(() => ResultFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => SubmissionCountOutputTypeArgsSchema)]).optional(),
 }).strict()
@@ -240,7 +243,8 @@ export const SubmissionSelectSchema: z.ZodType<Prisma.SubmissionSelect> = z.obje
   score: z.boolean().optional(),
   time: z.boolean().optional(),
   owner: z.union([z.boolean(),z.lazy(() => UserArgsSchema)]).optional(),
-  challenge: z.union([z.boolean(),z.lazy(() => ContestChallengeArgsSchema)]).optional(),
+  challenge: z.union([z.boolean(),z.lazy(() => ChallengeArgsSchema)]).optional(),
+  contest: z.union([z.boolean(),z.lazy(() => ContestArgsSchema)]).optional(),
   results: z.union([z.boolean(),z.lazy(() => ResultFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => SubmissionCountOutputTypeArgsSchema)]).optional(),
 }).strict()
@@ -297,6 +301,7 @@ export const ParticipantSelectSchema: z.ZodType<Prisma.ParticipantSelect> = z.ob
 export const ContestIncludeSchema: z.ZodType<Prisma.ContestInclude> = z.object({
   challenges: z.union([z.boolean(),z.lazy(() => ContestChallengeFindManyArgsSchema)]).optional(),
   participants: z.union([z.boolean(),z.lazy(() => ParticipantFindManyArgsSchema)]).optional(),
+  Submission: z.union([z.boolean(),z.lazy(() => SubmissionFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => ContestCountOutputTypeArgsSchema)]).optional(),
 }).strict()
 
@@ -312,6 +317,7 @@ export const ContestCountOutputTypeArgsSchema: z.ZodType<Prisma.ContestCountOutp
 export const ContestCountOutputTypeSelectSchema: z.ZodType<Prisma.ContestCountOutputTypeSelect> = z.object({
   challenges: z.boolean().optional(),
   participants: z.boolean().optional(),
+  Submission: z.boolean().optional(),
 }).strict();
 
 export const ContestSelectSchema: z.ZodType<Prisma.ContestSelect> = z.object({
@@ -322,6 +328,7 @@ export const ContestSelectSchema: z.ZodType<Prisma.ContestSelect> = z.object({
   description: z.boolean().optional(),
   challenges: z.union([z.boolean(),z.lazy(() => ContestChallengeFindManyArgsSchema)]).optional(),
   participants: z.union([z.boolean(),z.lazy(() => ParticipantFindManyArgsSchema)]).optional(),
+  Submission: z.union([z.boolean(),z.lazy(() => SubmissionFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => ContestCountOutputTypeArgsSchema)]).optional(),
 }).strict()
 
@@ -331,21 +338,11 @@ export const ContestSelectSchema: z.ZodType<Prisma.ContestSelect> = z.object({
 export const ContestChallengeIncludeSchema: z.ZodType<Prisma.ContestChallengeInclude> = z.object({
   challenge: z.union([z.boolean(),z.lazy(() => ChallengeArgsSchema)]).optional(),
   contest: z.union([z.boolean(),z.lazy(() => ContestArgsSchema)]).optional(),
-  submissions: z.union([z.boolean(),z.lazy(() => SubmissionFindManyArgsSchema)]).optional(),
-  _count: z.union([z.boolean(),z.lazy(() => ContestChallengeCountOutputTypeArgsSchema)]).optional(),
 }).strict()
 
 export const ContestChallengeArgsSchema: z.ZodType<Prisma.ContestChallengeDefaultArgs> = z.object({
   select: z.lazy(() => ContestChallengeSelectSchema).optional(),
   include: z.lazy(() => ContestChallengeIncludeSchema).optional(),
-}).strict();
-
-export const ContestChallengeCountOutputTypeArgsSchema: z.ZodType<Prisma.ContestChallengeCountOutputTypeDefaultArgs> = z.object({
-  select: z.lazy(() => ContestChallengeCountOutputTypeSelectSchema).nullish(),
-}).strict();
-
-export const ContestChallengeCountOutputTypeSelectSchema: z.ZodType<Prisma.ContestChallengeCountOutputTypeSelect> = z.object({
-  submissions: z.boolean().optional(),
 }).strict();
 
 export const ContestChallengeSelectSchema: z.ZodType<Prisma.ContestChallengeSelect> = z.object({
@@ -354,8 +351,6 @@ export const ContestChallengeSelectSchema: z.ZodType<Prisma.ContestChallengeSele
   max_score: z.boolean().optional(),
   challenge: z.union([z.boolean(),z.lazy(() => ChallengeArgsSchema)]).optional(),
   contest: z.union([z.boolean(),z.lazy(() => ContestArgsSchema)]).optional(),
-  submissions: z.union([z.boolean(),z.lazy(() => SubmissionFindManyArgsSchema)]).optional(),
-  _count: z.union([z.boolean(),z.lazy(() => ContestChallengeCountOutputTypeArgsSchema)]).optional(),
 }).strict()
 
 // CHALLENGE
@@ -365,6 +360,7 @@ export const ChallengeIncludeSchema: z.ZodType<Prisma.ChallengeInclude> = z.obje
   tasks: z.union([z.boolean(),z.lazy(() => TaskFindManyArgsSchema)]).optional(),
   contests: z.union([z.boolean(),z.lazy(() => ContestChallengeFindManyArgsSchema)]).optional(),
   tests: z.union([z.boolean(),z.lazy(() => TestFindManyArgsSchema)]).optional(),
+  submissions: z.union([z.boolean(),z.lazy(() => SubmissionFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => ChallengeCountOutputTypeArgsSchema)]).optional(),
 }).strict()
 
@@ -381,6 +377,7 @@ export const ChallengeCountOutputTypeSelectSchema: z.ZodType<Prisma.ChallengeCou
   tasks: z.boolean().optional(),
   contests: z.boolean().optional(),
   tests: z.boolean().optional(),
+  submissions: z.boolean().optional(),
 }).strict();
 
 export const ChallengeSelectSchema: z.ZodType<Prisma.ChallengeSelect> = z.object({
@@ -390,11 +387,13 @@ export const ChallengeSelectSchema: z.ZodType<Prisma.ChallengeSelect> = z.object
   description: z.boolean().optional(),
   input_format: z.boolean().optional(),
   output_format: z.boolean().optional(),
+  constraints: z.boolean().optional(),
   time_limit: z.boolean().optional(),
   memory_limit: z.boolean().optional(),
   tasks: z.union([z.boolean(),z.lazy(() => TaskFindManyArgsSchema)]).optional(),
   contests: z.union([z.boolean(),z.lazy(() => ContestChallengeFindManyArgsSchema)]).optional(),
   tests: z.union([z.boolean(),z.lazy(() => TestFindManyArgsSchema)]).optional(),
+  submissions: z.union([z.boolean(),z.lazy(() => SubmissionFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => ChallengeCountOutputTypeArgsSchema)]).optional(),
 }).strict()
 
@@ -425,6 +424,7 @@ export const TaskSelectSchema: z.ZodType<Prisma.TaskSelect> = z.object({
   type: z.boolean().optional(),
   task_number: z.boolean().optional(),
   weight: z.boolean().optional(),
+  constraints: z.boolean().optional(),
   challenge: z.union([z.boolean(),z.lazy(() => ChallengeArgsSchema)]).optional(),
   tests: z.union([z.boolean(),z.lazy(() => TestFindManyArgsSchema)]).optional(),
   _count: z.union([z.boolean(),z.lazy(() => TaskCountOutputTypeArgsSchema)]).optional(),
@@ -542,10 +542,11 @@ export const SubmissionWhereInputSchema: z.ZodType<Prisma.SubmissionWhereInput> 
   src: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   contest_id: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   challenge_id: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
-  score: z.union([ z.lazy(() => IntNullableFilterSchema),z.number() ]).optional().nullable(),
+  score: z.union([ z.lazy(() => FloatNullableFilterSchema),z.number() ]).optional().nullable(),
   time: z.union([ z.lazy(() => DateTimeFilterSchema),z.coerce.date() ]).optional(),
   owner: z.union([ z.lazy(() => UserRelationFilterSchema),z.lazy(() => UserWhereInputSchema) ]).optional(),
-  challenge: z.union([ z.lazy(() => ContestChallengeRelationFilterSchema),z.lazy(() => ContestChallengeWhereInputSchema) ]).optional(),
+  challenge: z.union([ z.lazy(() => ChallengeRelationFilterSchema),z.lazy(() => ChallengeWhereInputSchema) ]).optional(),
+  contest: z.union([ z.lazy(() => ContestRelationFilterSchema),z.lazy(() => ContestWhereInputSchema) ]).optional(),
   results: z.lazy(() => ResultListRelationFilterSchema).optional()
 }).strict() as z.ZodType<Prisma.SubmissionWhereInput>;
 
@@ -558,7 +559,8 @@ export const SubmissionOrderByWithRelationInputSchema: z.ZodType<Prisma.Submissi
   score: z.union([ z.lazy(() => SortOrderSchema),z.lazy(() => SortOrderInputSchema) ]).optional(),
   time: z.lazy(() => SortOrderSchema).optional(),
   owner: z.lazy(() => UserOrderByWithRelationInputSchema).optional(),
-  challenge: z.lazy(() => ContestChallengeOrderByWithRelationInputSchema).optional(),
+  challenge: z.lazy(() => ChallengeOrderByWithRelationInputSchema).optional(),
+  contest: z.lazy(() => ContestOrderByWithRelationInputSchema).optional(),
   results: z.lazy(() => ResultOrderByRelationAggregateInputSchema).optional()
 }).strict() as z.ZodType<Prisma.SubmissionOrderByWithRelationInput>;
 
@@ -574,10 +576,11 @@ export const SubmissionWhereUniqueInputSchema: z.ZodType<Prisma.SubmissionWhereU
   src: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   contest_id: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   challenge_id: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
-  score: z.union([ z.lazy(() => IntNullableFilterSchema),z.number().int() ]).optional().nullable(),
+  score: z.union([ z.lazy(() => FloatNullableFilterSchema),z.number() ]).optional().nullable(),
   time: z.union([ z.lazy(() => DateTimeFilterSchema),z.coerce.date() ]).optional(),
   owner: z.union([ z.lazy(() => UserRelationFilterSchema),z.lazy(() => UserWhereInputSchema) ]).optional(),
-  challenge: z.union([ z.lazy(() => ContestChallengeRelationFilterSchema),z.lazy(() => ContestChallengeWhereInputSchema) ]).optional(),
+  challenge: z.union([ z.lazy(() => ChallengeRelationFilterSchema),z.lazy(() => ChallengeWhereInputSchema) ]).optional(),
+  contest: z.union([ z.lazy(() => ContestRelationFilterSchema),z.lazy(() => ContestWhereInputSchema) ]).optional(),
   results: z.lazy(() => ResultListRelationFilterSchema).optional()
 }).strict()) as z.ZodType<Prisma.SubmissionWhereUniqueInput>;
 
@@ -605,7 +608,7 @@ export const SubmissionScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Su
   src: z.union([ z.lazy(() => StringWithAggregatesFilterSchema),z.string() ]).optional(),
   contest_id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema),z.string() ]).optional(),
   challenge_id: z.union([ z.lazy(() => StringWithAggregatesFilterSchema),z.string() ]).optional(),
-  score: z.union([ z.lazy(() => IntNullableWithAggregatesFilterSchema),z.number() ]).optional().nullable(),
+  score: z.union([ z.lazy(() => FloatNullableWithAggregatesFilterSchema),z.number() ]).optional().nullable(),
   time: z.union([ z.lazy(() => DateTimeWithAggregatesFilterSchema),z.coerce.date() ]).optional(),
 }).strict() as z.ZodType<Prisma.SubmissionScalarWhereWithAggregatesInput>;
 
@@ -754,7 +757,8 @@ export const ContestWhereInputSchema: z.ZodType<Prisma.ContestWhereInput> = z.ob
   end_time: z.union([ z.lazy(() => DateTimeNullableFilterSchema),z.coerce.date() ]).optional().nullable(),
   description: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   challenges: z.lazy(() => ContestChallengeListRelationFilterSchema).optional(),
-  participants: z.lazy(() => ParticipantListRelationFilterSchema).optional()
+  participants: z.lazy(() => ParticipantListRelationFilterSchema).optional(),
+  Submission: z.lazy(() => SubmissionListRelationFilterSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestWhereInput>;
 
 export const ContestOrderByWithRelationInputSchema: z.ZodType<Prisma.ContestOrderByWithRelationInput> = z.object({
@@ -764,7 +768,8 @@ export const ContestOrderByWithRelationInputSchema: z.ZodType<Prisma.ContestOrde
   end_time: z.union([ z.lazy(() => SortOrderSchema),z.lazy(() => SortOrderInputSchema) ]).optional(),
   description: z.lazy(() => SortOrderSchema).optional(),
   challenges: z.lazy(() => ContestChallengeOrderByRelationAggregateInputSchema).optional(),
-  participants: z.lazy(() => ParticipantOrderByRelationAggregateInputSchema).optional()
+  participants: z.lazy(() => ParticipantOrderByRelationAggregateInputSchema).optional(),
+  Submission: z.lazy(() => SubmissionOrderByRelationAggregateInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestOrderByWithRelationInput>;
 
 export const ContestWhereUniqueInputSchema: z.ZodType<Prisma.ContestWhereUniqueInput> = z.object({
@@ -780,7 +785,8 @@ export const ContestWhereUniqueInputSchema: z.ZodType<Prisma.ContestWhereUniqueI
   end_time: z.union([ z.lazy(() => DateTimeNullableFilterSchema),z.coerce.date() ]).optional().nullable(),
   description: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   challenges: z.lazy(() => ContestChallengeListRelationFilterSchema).optional(),
-  participants: z.lazy(() => ParticipantListRelationFilterSchema).optional()
+  participants: z.lazy(() => ParticipantListRelationFilterSchema).optional(),
+  Submission: z.lazy(() => SubmissionListRelationFilterSchema).optional()
 }).strict()) as z.ZodType<Prisma.ContestWhereUniqueInput>;
 
 export const ContestOrderByWithAggregationInputSchema: z.ZodType<Prisma.ContestOrderByWithAggregationInput> = z.object({
@@ -814,7 +820,6 @@ export const ContestChallengeWhereInputSchema: z.ZodType<Prisma.ContestChallenge
   max_score: z.union([ z.lazy(() => IntFilterSchema),z.number() ]).optional(),
   challenge: z.union([ z.lazy(() => ChallengeRelationFilterSchema),z.lazy(() => ChallengeWhereInputSchema) ]).optional(),
   contest: z.union([ z.lazy(() => ContestRelationFilterSchema),z.lazy(() => ContestWhereInputSchema) ]).optional(),
-  submissions: z.lazy(() => SubmissionListRelationFilterSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestChallengeWhereInput>;
 
 export const ContestChallengeOrderByWithRelationInputSchema: z.ZodType<Prisma.ContestChallengeOrderByWithRelationInput> = z.object({
@@ -822,8 +827,7 @@ export const ContestChallengeOrderByWithRelationInputSchema: z.ZodType<Prisma.Co
   contest_id: z.lazy(() => SortOrderSchema).optional(),
   max_score: z.lazy(() => SortOrderSchema).optional(),
   challenge: z.lazy(() => ChallengeOrderByWithRelationInputSchema).optional(),
-  contest: z.lazy(() => ContestOrderByWithRelationInputSchema).optional(),
-  submissions: z.lazy(() => SubmissionOrderByRelationAggregateInputSchema).optional()
+  contest: z.lazy(() => ContestOrderByWithRelationInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestChallengeOrderByWithRelationInput>;
 
 export const ContestChallengeWhereUniqueInputSchema: z.ZodType<Prisma.ContestChallengeWhereUniqueInput> = z.object({
@@ -839,7 +843,6 @@ export const ContestChallengeWhereUniqueInputSchema: z.ZodType<Prisma.ContestCha
   max_score: z.union([ z.lazy(() => IntFilterSchema),z.number().int() ]).optional(),
   challenge: z.union([ z.lazy(() => ChallengeRelationFilterSchema),z.lazy(() => ChallengeWhereInputSchema) ]).optional(),
   contest: z.union([ z.lazy(() => ContestRelationFilterSchema),z.lazy(() => ContestWhereInputSchema) ]).optional(),
-  submissions: z.lazy(() => SubmissionListRelationFilterSchema).optional()
 }).strict()) as z.ZodType<Prisma.ContestChallengeWhereUniqueInput>;
 
 export const ContestChallengeOrderByWithAggregationInputSchema: z.ZodType<Prisma.ContestChallengeOrderByWithAggregationInput> = z.object({
@@ -872,11 +875,13 @@ export const ChallengeWhereInputSchema: z.ZodType<Prisma.ChallengeWhereInput> = 
   description: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   input_format: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   output_format: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
+  constraints: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   time_limit: z.union([ z.lazy(() => IntFilterSchema),z.number() ]).optional(),
   memory_limit: z.union([ z.lazy(() => IntFilterSchema),z.number() ]).optional(),
   tasks: z.lazy(() => TaskListRelationFilterSchema).optional(),
   contests: z.lazy(() => ContestChallengeListRelationFilterSchema).optional(),
-  tests: z.lazy(() => TestListRelationFilterSchema).optional()
+  tests: z.lazy(() => TestListRelationFilterSchema).optional(),
+  submissions: z.lazy(() => SubmissionListRelationFilterSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeWhereInput>;
 
 export const ChallengeOrderByWithRelationInputSchema: z.ZodType<Prisma.ChallengeOrderByWithRelationInput> = z.object({
@@ -886,11 +891,13 @@ export const ChallengeOrderByWithRelationInputSchema: z.ZodType<Prisma.Challenge
   description: z.lazy(() => SortOrderSchema).optional(),
   input_format: z.lazy(() => SortOrderSchema).optional(),
   output_format: z.lazy(() => SortOrderSchema).optional(),
+  constraints: z.lazy(() => SortOrderSchema).optional(),
   time_limit: z.lazy(() => SortOrderSchema).optional(),
   memory_limit: z.lazy(() => SortOrderSchema).optional(),
   tasks: z.lazy(() => TaskOrderByRelationAggregateInputSchema).optional(),
   contests: z.lazy(() => ContestChallengeOrderByRelationAggregateInputSchema).optional(),
-  tests: z.lazy(() => TestOrderByRelationAggregateInputSchema).optional()
+  tests: z.lazy(() => TestOrderByRelationAggregateInputSchema).optional(),
+  submissions: z.lazy(() => SubmissionOrderByRelationAggregateInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeOrderByWithRelationInput>;
 
 export const ChallengeWhereUniqueInputSchema: z.ZodType<Prisma.ChallengeWhereUniqueInput> = z.object({
@@ -906,11 +913,13 @@ export const ChallengeWhereUniqueInputSchema: z.ZodType<Prisma.ChallengeWhereUni
   description: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   input_format: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   output_format: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
+  constraints: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   time_limit: z.union([ z.lazy(() => IntFilterSchema),z.number().int() ]).optional(),
   memory_limit: z.union([ z.lazy(() => IntFilterSchema),z.number().int() ]).optional(),
   tasks: z.lazy(() => TaskListRelationFilterSchema).optional(),
   contests: z.lazy(() => ContestChallengeListRelationFilterSchema).optional(),
-  tests: z.lazy(() => TestListRelationFilterSchema).optional()
+  tests: z.lazy(() => TestListRelationFilterSchema).optional(),
+  submissions: z.lazy(() => SubmissionListRelationFilterSchema).optional()
 }).strict()) as z.ZodType<Prisma.ChallengeWhereUniqueInput>;
 
 export const ChallengeOrderByWithAggregationInputSchema: z.ZodType<Prisma.ChallengeOrderByWithAggregationInput> = z.object({
@@ -920,6 +929,7 @@ export const ChallengeOrderByWithAggregationInputSchema: z.ZodType<Prisma.Challe
   description: z.lazy(() => SortOrderSchema).optional(),
   input_format: z.lazy(() => SortOrderSchema).optional(),
   output_format: z.lazy(() => SortOrderSchema).optional(),
+  constraints: z.lazy(() => SortOrderSchema).optional(),
   time_limit: z.lazy(() => SortOrderSchema).optional(),
   memory_limit: z.lazy(() => SortOrderSchema).optional(),
   _count: z.lazy(() => ChallengeCountOrderByAggregateInputSchema).optional(),
@@ -939,6 +949,7 @@ export const ChallengeScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.Cha
   description: z.union([ z.lazy(() => StringWithAggregatesFilterSchema),z.string() ]).optional(),
   input_format: z.union([ z.lazy(() => StringWithAggregatesFilterSchema),z.string() ]).optional(),
   output_format: z.union([ z.lazy(() => StringWithAggregatesFilterSchema),z.string() ]).optional(),
+  constraints: z.union([ z.lazy(() => StringWithAggregatesFilterSchema),z.string() ]).optional(),
   time_limit: z.union([ z.lazy(() => IntWithAggregatesFilterSchema),z.number() ]).optional(),
   memory_limit: z.union([ z.lazy(() => IntWithAggregatesFilterSchema),z.number() ]).optional(),
 }).strict() as z.ZodType<Prisma.ChallengeScalarWhereWithAggregatesInput>;
@@ -951,6 +962,7 @@ export const TaskWhereInputSchema: z.ZodType<Prisma.TaskWhereInput> = z.object({
   type: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   task_number: z.union([ z.lazy(() => IntFilterSchema),z.number() ]).optional(),
   weight: z.union([ z.lazy(() => IntFilterSchema),z.number() ]).optional(),
+  constraints: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   challenge: z.union([ z.lazy(() => ChallengeRelationFilterSchema),z.lazy(() => ChallengeWhereInputSchema) ]).optional(),
   tests: z.lazy(() => TestListRelationFilterSchema).optional()
 }).strict() as z.ZodType<Prisma.TaskWhereInput>;
@@ -960,6 +972,7 @@ export const TaskOrderByWithRelationInputSchema: z.ZodType<Prisma.TaskOrderByWit
   type: z.lazy(() => SortOrderSchema).optional(),
   task_number: z.lazy(() => SortOrderSchema).optional(),
   weight: z.lazy(() => SortOrderSchema).optional(),
+  constraints: z.lazy(() => SortOrderSchema).optional(),
   challenge: z.lazy(() => ChallengeOrderByWithRelationInputSchema).optional(),
   tests: z.lazy(() => TestOrderByRelationAggregateInputSchema).optional()
 }).strict() as z.ZodType<Prisma.TaskOrderByWithRelationInput>;
@@ -976,6 +989,7 @@ export const TaskWhereUniqueInputSchema: z.ZodType<Prisma.TaskWhereUniqueInput> 
   type: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   task_number: z.union([ z.lazy(() => IntFilterSchema),z.number().int() ]).optional(),
   weight: z.union([ z.lazy(() => IntFilterSchema),z.number().int() ]).optional(),
+  constraints: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   challenge: z.union([ z.lazy(() => ChallengeRelationFilterSchema),z.lazy(() => ChallengeWhereInputSchema) ]).optional(),
   tests: z.lazy(() => TestListRelationFilterSchema).optional()
 }).strict()) as z.ZodType<Prisma.TaskWhereUniqueInput>;
@@ -985,6 +999,7 @@ export const TaskOrderByWithAggregationInputSchema: z.ZodType<Prisma.TaskOrderBy
   type: z.lazy(() => SortOrderSchema).optional(),
   task_number: z.lazy(() => SortOrderSchema).optional(),
   weight: z.lazy(() => SortOrderSchema).optional(),
+  constraints: z.lazy(() => SortOrderSchema).optional(),
   _count: z.lazy(() => TaskCountOrderByAggregateInputSchema).optional(),
   _avg: z.lazy(() => TaskAvgOrderByAggregateInputSchema).optional(),
   _max: z.lazy(() => TaskMaxOrderByAggregateInputSchema).optional(),
@@ -1000,6 +1015,7 @@ export const TaskScalarWhereWithAggregatesInputSchema: z.ZodType<Prisma.TaskScal
   type: z.union([ z.lazy(() => StringWithAggregatesFilterSchema),z.string() ]).optional(),
   task_number: z.union([ z.lazy(() => IntWithAggregatesFilterSchema),z.number() ]).optional(),
   weight: z.union([ z.lazy(() => IntWithAggregatesFilterSchema),z.number() ]).optional(),
+  constraints: z.union([ z.lazy(() => StringWithAggregatesFilterSchema),z.string() ]).optional(),
 }).strict() as z.ZodType<Prisma.TaskScalarWhereWithAggregatesInput>;
 
 export const TestWhereInputSchema: z.ZodType<Prisma.TestWhereInput> = z.object({
@@ -1137,10 +1153,11 @@ export const UserUncheckedUpdateManyInputSchema: z.ZodType<Prisma.UserUncheckedU
 export const SubmissionCreateInputSchema: z.ZodType<Prisma.SubmissionCreateInput> = z.object({
   token: z.string(),
   src: z.string(),
-  score: z.number().int().optional().nullable(),
+  score: z.number().optional().nullable(),
   time: z.coerce.date(),
   owner: z.lazy(() => UserCreateNestedOneWithoutSubmissionsInputSchema),
-  challenge: z.lazy(() => ContestChallengeCreateNestedOneWithoutSubmissionsInputSchema),
+  challenge: z.lazy(() => ChallengeCreateNestedOneWithoutSubmissionsInputSchema),
+  contest: z.lazy(() => ContestCreateNestedOneWithoutSubmissionInputSchema),
   results: z.lazy(() => ResultCreateNestedManyWithoutSubmissionInputSchema).optional()
 }).strict() as z.ZodType<Prisma.SubmissionCreateInput>;
 
@@ -1150,7 +1167,7 @@ export const SubmissionUncheckedCreateInputSchema: z.ZodType<Prisma.SubmissionUn
   src: z.string(),
   contest_id: z.string(),
   challenge_id: z.string(),
-  score: z.number().int().optional().nullable(),
+  score: z.number().optional().nullable(),
   time: z.coerce.date(),
   results: z.lazy(() => ResultUncheckedCreateNestedManyWithoutSubmissionInputSchema).optional()
 }).strict() as z.ZodType<Prisma.SubmissionUncheckedCreateInput>;
@@ -1158,10 +1175,11 @@ export const SubmissionUncheckedCreateInputSchema: z.ZodType<Prisma.SubmissionUn
 export const SubmissionUpdateInputSchema: z.ZodType<Prisma.SubmissionUpdateInput> = z.object({
   token: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   src: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  score: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  score: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   time: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   owner: z.lazy(() => UserUpdateOneRequiredWithoutSubmissionsNestedInputSchema).optional(),
-  challenge: z.lazy(() => ContestChallengeUpdateOneRequiredWithoutSubmissionsNestedInputSchema).optional(),
+  challenge: z.lazy(() => ChallengeUpdateOneRequiredWithoutSubmissionsNestedInputSchema).optional(),
+  contest: z.lazy(() => ContestUpdateOneRequiredWithoutSubmissionNestedInputSchema).optional(),
   results: z.lazy(() => ResultUpdateManyWithoutSubmissionNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.SubmissionUpdateInput>;
 
@@ -1171,7 +1189,7 @@ export const SubmissionUncheckedUpdateInputSchema: z.ZodType<Prisma.SubmissionUn
   src: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   contest_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   challenge_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  score: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  score: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   time: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   results: z.lazy(() => ResultUncheckedUpdateManyWithoutSubmissionNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.SubmissionUncheckedUpdateInput>;
@@ -1179,7 +1197,7 @@ export const SubmissionUncheckedUpdateInputSchema: z.ZodType<Prisma.SubmissionUn
 export const SubmissionUpdateManyMutationInputSchema: z.ZodType<Prisma.SubmissionUpdateManyMutationInput> = z.object({
   token: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   src: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  score: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  score: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   time: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict() as z.ZodType<Prisma.SubmissionUpdateManyMutationInput>;
 
@@ -1189,7 +1207,7 @@ export const SubmissionUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Submissi
   src: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   contest_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   challenge_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  score: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  score: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   time: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict() as z.ZodType<Prisma.SubmissionUncheckedUpdateManyInput>;
 
@@ -1305,7 +1323,8 @@ export const ContestCreateInputSchema: z.ZodType<Prisma.ContestCreateInput> = z.
   end_time: z.coerce.date().optional().nullable(),
   description: z.string(),
   challenges: z.lazy(() => ContestChallengeCreateNestedManyWithoutContestInputSchema).optional(),
-  participants: z.lazy(() => ParticipantCreateNestedManyWithoutContestInputSchema).optional()
+  participants: z.lazy(() => ParticipantCreateNestedManyWithoutContestInputSchema).optional(),
+  Submission: z.lazy(() => SubmissionCreateNestedManyWithoutContestInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestCreateInput>;
 
 export const ContestUncheckedCreateInputSchema: z.ZodType<Prisma.ContestUncheckedCreateInput> = z.object({
@@ -1315,7 +1334,8 @@ export const ContestUncheckedCreateInputSchema: z.ZodType<Prisma.ContestUnchecke
   end_time: z.coerce.date().optional().nullable(),
   description: z.string(),
   challenges: z.lazy(() => ContestChallengeUncheckedCreateNestedManyWithoutContestInputSchema).optional(),
-  participants: z.lazy(() => ParticipantUncheckedCreateNestedManyWithoutContestInputSchema).optional()
+  participants: z.lazy(() => ParticipantUncheckedCreateNestedManyWithoutContestInputSchema).optional(),
+  Submission: z.lazy(() => SubmissionUncheckedCreateNestedManyWithoutContestInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestUncheckedCreateInput>;
 
 export const ContestUpdateInputSchema: z.ZodType<Prisma.ContestUpdateInput> = z.object({
@@ -1325,7 +1345,8 @@ export const ContestUpdateInputSchema: z.ZodType<Prisma.ContestUpdateInput> = z.
   end_time: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   challenges: z.lazy(() => ContestChallengeUpdateManyWithoutContestNestedInputSchema).optional(),
-  participants: z.lazy(() => ParticipantUpdateManyWithoutContestNestedInputSchema).optional()
+  participants: z.lazy(() => ParticipantUpdateManyWithoutContestNestedInputSchema).optional(),
+  Submission: z.lazy(() => SubmissionUpdateManyWithoutContestNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestUpdateInput>;
 
 export const ContestUncheckedUpdateInputSchema: z.ZodType<Prisma.ContestUncheckedUpdateInput> = z.object({
@@ -1335,7 +1356,8 @@ export const ContestUncheckedUpdateInputSchema: z.ZodType<Prisma.ContestUnchecke
   end_time: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   challenges: z.lazy(() => ContestChallengeUncheckedUpdateManyWithoutContestNestedInputSchema).optional(),
-  participants: z.lazy(() => ParticipantUncheckedUpdateManyWithoutContestNestedInputSchema).optional()
+  participants: z.lazy(() => ParticipantUncheckedUpdateManyWithoutContestNestedInputSchema).optional(),
+  Submission: z.lazy(() => SubmissionUncheckedUpdateManyWithoutContestNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestUncheckedUpdateInput>;
 
 export const ContestUpdateManyMutationInputSchema: z.ZodType<Prisma.ContestUpdateManyMutationInput> = z.object({
@@ -1357,29 +1379,25 @@ export const ContestUncheckedUpdateManyInputSchema: z.ZodType<Prisma.ContestUnch
 export const ContestChallengeCreateInputSchema: z.ZodType<Prisma.ContestChallengeCreateInput> = z.object({
   max_score: z.number().int(),
   challenge: z.lazy(() => ChallengeCreateNestedOneWithoutContestsInputSchema),
-  contest: z.lazy(() => ContestCreateNestedOneWithoutChallengesInputSchema),
-  submissions: z.lazy(() => SubmissionCreateNestedManyWithoutChallengeInputSchema).optional()
+  contest: z.lazy(() => ContestCreateNestedOneWithoutChallengesInputSchema)
 }).strict() as z.ZodType<Prisma.ContestChallengeCreateInput>;
 
 export const ContestChallengeUncheckedCreateInputSchema: z.ZodType<Prisma.ContestChallengeUncheckedCreateInput> = z.object({
   challenge_id: z.string(),
   contest_id: z.string(),
-  max_score: z.number().int(),
-  submissions: z.lazy(() => SubmissionUncheckedCreateNestedManyWithoutChallengeInputSchema).optional()
+  max_score: z.number().int()
 }).strict() as z.ZodType<Prisma.ContestChallengeUncheckedCreateInput>;
 
 export const ContestChallengeUpdateInputSchema: z.ZodType<Prisma.ContestChallengeUpdateInput> = z.object({
   max_score: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   challenge: z.lazy(() => ChallengeUpdateOneRequiredWithoutContestsNestedInputSchema).optional(),
-  contest: z.lazy(() => ContestUpdateOneRequiredWithoutChallengesNestedInputSchema).optional(),
-  submissions: z.lazy(() => SubmissionUpdateManyWithoutChallengeNestedInputSchema).optional()
+  contest: z.lazy(() => ContestUpdateOneRequiredWithoutChallengesNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestChallengeUpdateInput>;
 
 export const ContestChallengeUncheckedUpdateInputSchema: z.ZodType<Prisma.ContestChallengeUncheckedUpdateInput> = z.object({
   challenge_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   contest_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   max_score: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  submissions: z.lazy(() => SubmissionUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestChallengeUncheckedUpdateInput>;
 
 export const ContestChallengeUpdateManyMutationInputSchema: z.ZodType<Prisma.ContestChallengeUpdateManyMutationInput> = z.object({
@@ -1399,11 +1417,13 @@ export const ChallengeCreateInputSchema: z.ZodType<Prisma.ChallengeCreateInput> 
   description: z.string(),
   input_format: z.string(),
   output_format: z.string(),
+  constraints: z.string(),
   time_limit: z.number().int(),
   memory_limit: z.number().int(),
   tasks: z.lazy(() => TaskCreateNestedManyWithoutChallengeInputSchema).optional(),
   contests: z.lazy(() => ContestChallengeCreateNestedManyWithoutChallengeInputSchema).optional(),
-  tests: z.lazy(() => TestCreateNestedManyWithoutChallengeInputSchema).optional()
+  tests: z.lazy(() => TestCreateNestedManyWithoutChallengeInputSchema).optional(),
+  submissions: z.lazy(() => SubmissionCreateNestedManyWithoutChallengeInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeCreateInput>;
 
 export const ChallengeUncheckedCreateInputSchema: z.ZodType<Prisma.ChallengeUncheckedCreateInput> = z.object({
@@ -1413,11 +1433,13 @@ export const ChallengeUncheckedCreateInputSchema: z.ZodType<Prisma.ChallengeUnch
   description: z.string(),
   input_format: z.string(),
   output_format: z.string(),
+  constraints: z.string(),
   time_limit: z.number().int(),
   memory_limit: z.number().int(),
   tasks: z.lazy(() => TaskUncheckedCreateNestedManyWithoutChallengeInputSchema).optional(),
   contests: z.lazy(() => ContestChallengeUncheckedCreateNestedManyWithoutChallengeInputSchema).optional(),
-  tests: z.lazy(() => TestUncheckedCreateNestedManyWithoutChallengeInputSchema).optional()
+  tests: z.lazy(() => TestUncheckedCreateNestedManyWithoutChallengeInputSchema).optional(),
+  submissions: z.lazy(() => SubmissionUncheckedCreateNestedManyWithoutChallengeInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeUncheckedCreateInput>;
 
 export const ChallengeUpdateInputSchema: z.ZodType<Prisma.ChallengeUpdateInput> = z.object({
@@ -1427,11 +1449,13 @@ export const ChallengeUpdateInputSchema: z.ZodType<Prisma.ChallengeUpdateInput> 
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   input_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   output_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   time_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   memory_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   tasks: z.lazy(() => TaskUpdateManyWithoutChallengeNestedInputSchema).optional(),
   contests: z.lazy(() => ContestChallengeUpdateManyWithoutChallengeNestedInputSchema).optional(),
-  tests: z.lazy(() => TestUpdateManyWithoutChallengeNestedInputSchema).optional()
+  tests: z.lazy(() => TestUpdateManyWithoutChallengeNestedInputSchema).optional(),
+  submissions: z.lazy(() => SubmissionUpdateManyWithoutChallengeNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeUpdateInput>;
 
 export const ChallengeUncheckedUpdateInputSchema: z.ZodType<Prisma.ChallengeUncheckedUpdateInput> = z.object({
@@ -1441,11 +1465,13 @@ export const ChallengeUncheckedUpdateInputSchema: z.ZodType<Prisma.ChallengeUnch
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   input_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   output_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   time_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   memory_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   tasks: z.lazy(() => TaskUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional(),
   contests: z.lazy(() => ContestChallengeUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional(),
-  tests: z.lazy(() => TestUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional()
+  tests: z.lazy(() => TestUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional(),
+  submissions: z.lazy(() => SubmissionUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeUncheckedUpdateInput>;
 
 export const ChallengeUpdateManyMutationInputSchema: z.ZodType<Prisma.ChallengeUpdateManyMutationInput> = z.object({
@@ -1455,6 +1481,7 @@ export const ChallengeUpdateManyMutationInputSchema: z.ZodType<Prisma.ChallengeU
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   input_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   output_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   time_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   memory_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict() as z.ZodType<Prisma.ChallengeUpdateManyMutationInput>;
@@ -1466,6 +1493,7 @@ export const ChallengeUncheckedUpdateManyInputSchema: z.ZodType<Prisma.Challenge
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   input_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   output_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   time_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   memory_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict() as z.ZodType<Prisma.ChallengeUncheckedUpdateManyInput>;
@@ -1474,6 +1502,7 @@ export const TaskCreateInputSchema: z.ZodType<Prisma.TaskCreateInput> = z.object
   type: z.string(),
   task_number: z.number().int(),
   weight: z.number().int(),
+  constraints: z.string(),
   challenge: z.lazy(() => ChallengeCreateNestedOneWithoutTasksInputSchema),
   tests: z.lazy(() => TestCreateNestedManyWithoutTaskInputSchema).optional()
 }).strict() as z.ZodType<Prisma.TaskCreateInput>;
@@ -1483,6 +1512,7 @@ export const TaskUncheckedCreateInputSchema: z.ZodType<Prisma.TaskUncheckedCreat
   type: z.string(),
   task_number: z.number().int(),
   weight: z.number().int(),
+  constraints: z.string(),
   tests: z.lazy(() => TestUncheckedCreateNestedManyWithoutTaskInputSchema).optional()
 }).strict() as z.ZodType<Prisma.TaskUncheckedCreateInput>;
 
@@ -1490,6 +1520,7 @@ export const TaskUpdateInputSchema: z.ZodType<Prisma.TaskUpdateInput> = z.object
   type: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   task_number: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   weight: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   challenge: z.lazy(() => ChallengeUpdateOneRequiredWithoutTasksNestedInputSchema).optional(),
   tests: z.lazy(() => TestUpdateManyWithoutTaskNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.TaskUpdateInput>;
@@ -1499,6 +1530,7 @@ export const TaskUncheckedUpdateInputSchema: z.ZodType<Prisma.TaskUncheckedUpdat
   type: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   task_number: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   weight: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   tests: z.lazy(() => TestUncheckedUpdateManyWithoutTaskNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.TaskUncheckedUpdateInput>;
 
@@ -1506,6 +1538,7 @@ export const TaskUpdateManyMutationInputSchema: z.ZodType<Prisma.TaskUpdateManyM
   type: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   task_number: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   weight: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict() as z.ZodType<Prisma.TaskUpdateManyMutationInput>;
 
 export const TaskUncheckedUpdateManyInputSchema: z.ZodType<Prisma.TaskUncheckedUpdateManyInput> = z.object({
@@ -1513,6 +1546,7 @@ export const TaskUncheckedUpdateManyInputSchema: z.ZodType<Prisma.TaskUncheckedU
   type: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   task_number: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   weight: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict() as z.ZodType<Prisma.TaskUncheckedUpdateManyInput>;
 
 export const TestCreateInputSchema: z.ZodType<Prisma.TestCreateInput> = z.object({
@@ -1702,7 +1736,7 @@ export const BoolWithAggregatesFilterSchema: z.ZodType<Prisma.BoolWithAggregates
   _max: z.lazy(() => NestedBoolFilterSchema).optional()
 }).strict() as z.ZodType<Prisma.BoolWithAggregatesFilter>;
 
-export const IntNullableFilterSchema: z.ZodType<Prisma.IntNullableFilter> = z.object({
+export const FloatNullableFilterSchema: z.ZodType<Prisma.FloatNullableFilter> = z.object({
   equals: z.number().optional().nullable(),
   in: z.number().array().optional().nullable(),
   notIn: z.number().array().optional().nullable(),
@@ -1710,8 +1744,8 @@ export const IntNullableFilterSchema: z.ZodType<Prisma.IntNullableFilter> = z.ob
   lte: z.number().optional(),
   gt: z.number().optional(),
   gte: z.number().optional(),
-  not: z.union([ z.number(),z.lazy(() => NestedIntNullableFilterSchema) ]).optional().nullable(),
-}).strict() as z.ZodType<Prisma.IntNullableFilter>;
+  not: z.union([ z.number(),z.lazy(() => NestedFloatNullableFilterSchema) ]).optional().nullable(),
+}).strict() as z.ZodType<Prisma.FloatNullableFilter>;
 
 export const DateTimeFilterSchema: z.ZodType<Prisma.DateTimeFilter> = z.object({
   equals: z.coerce.date().optional(),
@@ -1729,10 +1763,15 @@ export const UserRelationFilterSchema: z.ZodType<Prisma.UserRelationFilter> = z.
   isNot: z.lazy(() => UserWhereInputSchema).optional()
 }).strict() as z.ZodType<Prisma.UserRelationFilter>;
 
-export const ContestChallengeRelationFilterSchema: z.ZodType<Prisma.ContestChallengeRelationFilter> = z.object({
-  is: z.lazy(() => ContestChallengeWhereInputSchema).optional(),
-  isNot: z.lazy(() => ContestChallengeWhereInputSchema).optional()
-}).strict() as z.ZodType<Prisma.ContestChallengeRelationFilter>;
+export const ChallengeRelationFilterSchema: z.ZodType<Prisma.ChallengeRelationFilter> = z.object({
+  is: z.lazy(() => ChallengeWhereInputSchema).optional(),
+  isNot: z.lazy(() => ChallengeWhereInputSchema).optional()
+}).strict() as z.ZodType<Prisma.ChallengeRelationFilter>;
+
+export const ContestRelationFilterSchema: z.ZodType<Prisma.ContestRelationFilter> = z.object({
+  is: z.lazy(() => ContestWhereInputSchema).optional(),
+  isNot: z.lazy(() => ContestWhereInputSchema).optional()
+}).strict() as z.ZodType<Prisma.ContestRelationFilter>;
 
 export const ResultListRelationFilterSchema: z.ZodType<Prisma.ResultListRelationFilter> = z.object({
   every: z.lazy(() => ResultWhereInputSchema).optional(),
@@ -1789,7 +1828,7 @@ export const SubmissionSumOrderByAggregateInputSchema: z.ZodType<Prisma.Submissi
   score: z.lazy(() => SortOrderSchema).optional()
 }).strict() as z.ZodType<Prisma.SubmissionSumOrderByAggregateInput>;
 
-export const IntNullableWithAggregatesFilterSchema: z.ZodType<Prisma.IntNullableWithAggregatesFilter> = z.object({
+export const FloatNullableWithAggregatesFilterSchema: z.ZodType<Prisma.FloatNullableWithAggregatesFilter> = z.object({
   equals: z.number().optional().nullable(),
   in: z.number().array().optional().nullable(),
   notIn: z.number().array().optional().nullable(),
@@ -1797,13 +1836,13 @@ export const IntNullableWithAggregatesFilterSchema: z.ZodType<Prisma.IntNullable
   lte: z.number().optional(),
   gt: z.number().optional(),
   gte: z.number().optional(),
-  not: z.union([ z.number(),z.lazy(() => NestedIntNullableWithAggregatesFilterSchema) ]).optional().nullable(),
+  not: z.union([ z.number(),z.lazy(() => NestedFloatNullableWithAggregatesFilterSchema) ]).optional().nullable(),
   _count: z.lazy(() => NestedIntNullableFilterSchema).optional(),
   _avg: z.lazy(() => NestedFloatNullableFilterSchema).optional(),
-  _sum: z.lazy(() => NestedIntNullableFilterSchema).optional(),
-  _min: z.lazy(() => NestedIntNullableFilterSchema).optional(),
-  _max: z.lazy(() => NestedIntNullableFilterSchema).optional()
-}).strict() as z.ZodType<Prisma.IntNullableWithAggregatesFilter>;
+  _sum: z.lazy(() => NestedFloatNullableFilterSchema).optional(),
+  _min: z.lazy(() => NestedFloatNullableFilterSchema).optional(),
+  _max: z.lazy(() => NestedFloatNullableFilterSchema).optional()
+}).strict() as z.ZodType<Prisma.FloatNullableWithAggregatesFilter>;
 
 export const DateTimeWithAggregatesFilterSchema: z.ZodType<Prisma.DateTimeWithAggregatesFilter> = z.object({
   equals: z.coerce.date().optional(),
@@ -1907,11 +1946,6 @@ export const FloatWithAggregatesFilterSchema: z.ZodType<Prisma.FloatWithAggregat
   _max: z.lazy(() => NestedFloatFilterSchema).optional()
 }).strict() as z.ZodType<Prisma.FloatWithAggregatesFilter>;
 
-export const ContestRelationFilterSchema: z.ZodType<Prisma.ContestRelationFilter> = z.object({
-  is: z.lazy(() => ContestWhereInputSchema).optional(),
-  isNot: z.lazy(() => ContestWhereInputSchema).optional()
-}).strict() as z.ZodType<Prisma.ContestRelationFilter>;
-
 export const ParticipantUser_idContest_idCompoundUniqueInputSchema: z.ZodType<Prisma.ParticipantUser_idContest_idCompoundUniqueInput> = z.object({
   user_id: z.number(),
   contest_id: z.string()
@@ -2002,11 +2036,6 @@ export const DateTimeNullableWithAggregatesFilterSchema: z.ZodType<Prisma.DateTi
   _max: z.lazy(() => NestedDateTimeNullableFilterSchema).optional()
 }).strict() as z.ZodType<Prisma.DateTimeNullableWithAggregatesFilter>;
 
-export const ChallengeRelationFilterSchema: z.ZodType<Prisma.ChallengeRelationFilter> = z.object({
-  is: z.lazy(() => ChallengeWhereInputSchema).optional(),
-  isNot: z.lazy(() => ChallengeWhereInputSchema).optional()
-}).strict() as z.ZodType<Prisma.ChallengeRelationFilter>;
-
 export const ContestChallengeChallenge_idContest_idCompoundUniqueInputSchema: z.ZodType<Prisma.ContestChallengeChallenge_idContest_idCompoundUniqueInput> = z.object({
   challenge_id: z.string(),
   contest_id: z.string()
@@ -2065,6 +2094,7 @@ export const ChallengeCountOrderByAggregateInputSchema: z.ZodType<Prisma.Challen
   description: z.lazy(() => SortOrderSchema).optional(),
   input_format: z.lazy(() => SortOrderSchema).optional(),
   output_format: z.lazy(() => SortOrderSchema).optional(),
+  constraints: z.lazy(() => SortOrderSchema).optional(),
   time_limit: z.lazy(() => SortOrderSchema).optional(),
   memory_limit: z.lazy(() => SortOrderSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeCountOrderByAggregateInput>;
@@ -2081,6 +2111,7 @@ export const ChallengeMaxOrderByAggregateInputSchema: z.ZodType<Prisma.Challenge
   description: z.lazy(() => SortOrderSchema).optional(),
   input_format: z.lazy(() => SortOrderSchema).optional(),
   output_format: z.lazy(() => SortOrderSchema).optional(),
+  constraints: z.lazy(() => SortOrderSchema).optional(),
   time_limit: z.lazy(() => SortOrderSchema).optional(),
   memory_limit: z.lazy(() => SortOrderSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeMaxOrderByAggregateInput>;
@@ -2092,6 +2123,7 @@ export const ChallengeMinOrderByAggregateInputSchema: z.ZodType<Prisma.Challenge
   description: z.lazy(() => SortOrderSchema).optional(),
   input_format: z.lazy(() => SortOrderSchema).optional(),
   output_format: z.lazy(() => SortOrderSchema).optional(),
+  constraints: z.lazy(() => SortOrderSchema).optional(),
   time_limit: z.lazy(() => SortOrderSchema).optional(),
   memory_limit: z.lazy(() => SortOrderSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeMinOrderByAggregateInput>;
@@ -2110,7 +2142,8 @@ export const TaskCountOrderByAggregateInputSchema: z.ZodType<Prisma.TaskCountOrd
   challenge_id: z.lazy(() => SortOrderSchema).optional(),
   type: z.lazy(() => SortOrderSchema).optional(),
   task_number: z.lazy(() => SortOrderSchema).optional(),
-  weight: z.lazy(() => SortOrderSchema).optional()
+  weight: z.lazy(() => SortOrderSchema).optional(),
+  constraints: z.lazy(() => SortOrderSchema).optional()
 }).strict() as z.ZodType<Prisma.TaskCountOrderByAggregateInput>;
 
 export const TaskAvgOrderByAggregateInputSchema: z.ZodType<Prisma.TaskAvgOrderByAggregateInput> = z.object({
@@ -2122,14 +2155,16 @@ export const TaskMaxOrderByAggregateInputSchema: z.ZodType<Prisma.TaskMaxOrderBy
   challenge_id: z.lazy(() => SortOrderSchema).optional(),
   type: z.lazy(() => SortOrderSchema).optional(),
   task_number: z.lazy(() => SortOrderSchema).optional(),
-  weight: z.lazy(() => SortOrderSchema).optional()
+  weight: z.lazy(() => SortOrderSchema).optional(),
+  constraints: z.lazy(() => SortOrderSchema).optional()
 }).strict() as z.ZodType<Prisma.TaskMaxOrderByAggregateInput>;
 
 export const TaskMinOrderByAggregateInputSchema: z.ZodType<Prisma.TaskMinOrderByAggregateInput> = z.object({
   challenge_id: z.lazy(() => SortOrderSchema).optional(),
   type: z.lazy(() => SortOrderSchema).optional(),
   task_number: z.lazy(() => SortOrderSchema).optional(),
-  weight: z.lazy(() => SortOrderSchema).optional()
+  weight: z.lazy(() => SortOrderSchema).optional(),
+  constraints: z.lazy(() => SortOrderSchema).optional()
 }).strict() as z.ZodType<Prisma.TaskMinOrderByAggregateInput>;
 
 export const TaskSumOrderByAggregateInputSchema: z.ZodType<Prisma.TaskSumOrderByAggregateInput> = z.object({
@@ -2289,11 +2324,17 @@ export const UserCreateNestedOneWithoutSubmissionsInputSchema: z.ZodType<Prisma.
   connect: z.lazy(() => UserWhereUniqueInputSchema).optional()
 }).strict() as z.ZodType<Prisma.UserCreateNestedOneWithoutSubmissionsInput>;
 
-export const ContestChallengeCreateNestedOneWithoutSubmissionsInputSchema: z.ZodType<Prisma.ContestChallengeCreateNestedOneWithoutSubmissionsInput> = z.object({
-  create: z.union([ z.lazy(() => ContestChallengeCreateWithoutSubmissionsInputSchema),z.lazy(() => ContestChallengeUncheckedCreateWithoutSubmissionsInputSchema) ]).optional(),
-  connectOrCreate: z.lazy(() => ContestChallengeCreateOrConnectWithoutSubmissionsInputSchema).optional(),
-  connect: z.lazy(() => ContestChallengeWhereUniqueInputSchema).optional()
-}).strict() as z.ZodType<Prisma.ContestChallengeCreateNestedOneWithoutSubmissionsInput>;
+export const ChallengeCreateNestedOneWithoutSubmissionsInputSchema: z.ZodType<Prisma.ChallengeCreateNestedOneWithoutSubmissionsInput> = z.object({
+  create: z.union([ z.lazy(() => ChallengeCreateWithoutSubmissionsInputSchema),z.lazy(() => ChallengeUncheckedCreateWithoutSubmissionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => ChallengeCreateOrConnectWithoutSubmissionsInputSchema).optional(),
+  connect: z.lazy(() => ChallengeWhereUniqueInputSchema).optional()
+}).strict() as z.ZodType<Prisma.ChallengeCreateNestedOneWithoutSubmissionsInput>;
+
+export const ContestCreateNestedOneWithoutSubmissionInputSchema: z.ZodType<Prisma.ContestCreateNestedOneWithoutSubmissionInput> = z.object({
+  create: z.union([ z.lazy(() => ContestCreateWithoutSubmissionInputSchema),z.lazy(() => ContestUncheckedCreateWithoutSubmissionInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => ContestCreateOrConnectWithoutSubmissionInputSchema).optional(),
+  connect: z.lazy(() => ContestWhereUniqueInputSchema).optional()
+}).strict() as z.ZodType<Prisma.ContestCreateNestedOneWithoutSubmissionInput>;
 
 export const ResultCreateNestedManyWithoutSubmissionInputSchema: z.ZodType<Prisma.ResultCreateNestedManyWithoutSubmissionInput> = z.object({
   create: z.union([ z.lazy(() => ResultCreateWithoutSubmissionInputSchema),z.lazy(() => ResultCreateWithoutSubmissionInputSchema).array(),z.lazy(() => ResultUncheckedCreateWithoutSubmissionInputSchema),z.lazy(() => ResultUncheckedCreateWithoutSubmissionInputSchema).array() ]).optional(),
@@ -2307,13 +2348,13 @@ export const ResultUncheckedCreateNestedManyWithoutSubmissionInputSchema: z.ZodT
   connect: z.union([ z.lazy(() => ResultWhereUniqueInputSchema),z.lazy(() => ResultWhereUniqueInputSchema).array() ]).optional(),
 }).strict() as z.ZodType<Prisma.ResultUncheckedCreateNestedManyWithoutSubmissionInput>;
 
-export const NullableIntFieldUpdateOperationsInputSchema: z.ZodType<Prisma.NullableIntFieldUpdateOperationsInput> = z.object({
+export const NullableFloatFieldUpdateOperationsInputSchema: z.ZodType<Prisma.NullableFloatFieldUpdateOperationsInput> = z.object({
   set: z.number().optional().nullable(),
   increment: z.number().optional(),
   decrement: z.number().optional(),
   multiply: z.number().optional(),
   divide: z.number().optional()
-}).strict() as z.ZodType<Prisma.NullableIntFieldUpdateOperationsInput>;
+}).strict() as z.ZodType<Prisma.NullableFloatFieldUpdateOperationsInput>;
 
 export const DateTimeFieldUpdateOperationsInputSchema: z.ZodType<Prisma.DateTimeFieldUpdateOperationsInput> = z.object({
   set: z.coerce.date().optional()
@@ -2327,13 +2368,21 @@ export const UserUpdateOneRequiredWithoutSubmissionsNestedInputSchema: z.ZodType
   update: z.union([ z.lazy(() => UserUpdateToOneWithWhereWithoutSubmissionsInputSchema),z.lazy(() => UserUpdateWithoutSubmissionsInputSchema),z.lazy(() => UserUncheckedUpdateWithoutSubmissionsInputSchema) ]).optional(),
 }).strict() as z.ZodType<Prisma.UserUpdateOneRequiredWithoutSubmissionsNestedInput>;
 
-export const ContestChallengeUpdateOneRequiredWithoutSubmissionsNestedInputSchema: z.ZodType<Prisma.ContestChallengeUpdateOneRequiredWithoutSubmissionsNestedInput> = z.object({
-  create: z.union([ z.lazy(() => ContestChallengeCreateWithoutSubmissionsInputSchema),z.lazy(() => ContestChallengeUncheckedCreateWithoutSubmissionsInputSchema) ]).optional(),
-  connectOrCreate: z.lazy(() => ContestChallengeCreateOrConnectWithoutSubmissionsInputSchema).optional(),
-  upsert: z.lazy(() => ContestChallengeUpsertWithoutSubmissionsInputSchema).optional(),
-  connect: z.lazy(() => ContestChallengeWhereUniqueInputSchema).optional(),
-  update: z.union([ z.lazy(() => ContestChallengeUpdateToOneWithWhereWithoutSubmissionsInputSchema),z.lazy(() => ContestChallengeUpdateWithoutSubmissionsInputSchema),z.lazy(() => ContestChallengeUncheckedUpdateWithoutSubmissionsInputSchema) ]).optional(),
-}).strict() as z.ZodType<Prisma.ContestChallengeUpdateOneRequiredWithoutSubmissionsNestedInput>;
+export const ChallengeUpdateOneRequiredWithoutSubmissionsNestedInputSchema: z.ZodType<Prisma.ChallengeUpdateOneRequiredWithoutSubmissionsNestedInput> = z.object({
+  create: z.union([ z.lazy(() => ChallengeCreateWithoutSubmissionsInputSchema),z.lazy(() => ChallengeUncheckedCreateWithoutSubmissionsInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => ChallengeCreateOrConnectWithoutSubmissionsInputSchema).optional(),
+  upsert: z.lazy(() => ChallengeUpsertWithoutSubmissionsInputSchema).optional(),
+  connect: z.lazy(() => ChallengeWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => ChallengeUpdateToOneWithWhereWithoutSubmissionsInputSchema),z.lazy(() => ChallengeUpdateWithoutSubmissionsInputSchema),z.lazy(() => ChallengeUncheckedUpdateWithoutSubmissionsInputSchema) ]).optional(),
+}).strict() as z.ZodType<Prisma.ChallengeUpdateOneRequiredWithoutSubmissionsNestedInput>;
+
+export const ContestUpdateOneRequiredWithoutSubmissionNestedInputSchema: z.ZodType<Prisma.ContestUpdateOneRequiredWithoutSubmissionNestedInput> = z.object({
+  create: z.union([ z.lazy(() => ContestCreateWithoutSubmissionInputSchema),z.lazy(() => ContestUncheckedCreateWithoutSubmissionInputSchema) ]).optional(),
+  connectOrCreate: z.lazy(() => ContestCreateOrConnectWithoutSubmissionInputSchema).optional(),
+  upsert: z.lazy(() => ContestUpsertWithoutSubmissionInputSchema).optional(),
+  connect: z.lazy(() => ContestWhereUniqueInputSchema).optional(),
+  update: z.union([ z.lazy(() => ContestUpdateToOneWithWhereWithoutSubmissionInputSchema),z.lazy(() => ContestUpdateWithoutSubmissionInputSchema),z.lazy(() => ContestUncheckedUpdateWithoutSubmissionInputSchema) ]).optional(),
+}).strict() as z.ZodType<Prisma.ContestUpdateOneRequiredWithoutSubmissionNestedInput>;
 
 export const ResultUpdateManyWithoutSubmissionNestedInputSchema: z.ZodType<Prisma.ResultUpdateManyWithoutSubmissionNestedInput> = z.object({
   create: z.union([ z.lazy(() => ResultCreateWithoutSubmissionInputSchema),z.lazy(() => ResultCreateWithoutSubmissionInputSchema).array(),z.lazy(() => ResultUncheckedCreateWithoutSubmissionInputSchema),z.lazy(() => ResultUncheckedCreateWithoutSubmissionInputSchema).array() ]).optional(),
@@ -2423,6 +2472,12 @@ export const ParticipantCreateNestedManyWithoutContestInputSchema: z.ZodType<Pri
   connect: z.union([ z.lazy(() => ParticipantWhereUniqueInputSchema),z.lazy(() => ParticipantWhereUniqueInputSchema).array() ]).optional(),
 }).strict() as z.ZodType<Prisma.ParticipantCreateNestedManyWithoutContestInput>;
 
+export const SubmissionCreateNestedManyWithoutContestInputSchema: z.ZodType<Prisma.SubmissionCreateNestedManyWithoutContestInput> = z.object({
+  create: z.union([ z.lazy(() => SubmissionCreateWithoutContestInputSchema),z.lazy(() => SubmissionCreateWithoutContestInputSchema).array(),z.lazy(() => SubmissionUncheckedCreateWithoutContestInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutContestInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => SubmissionCreateOrConnectWithoutContestInputSchema),z.lazy(() => SubmissionCreateOrConnectWithoutContestInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+}).strict() as z.ZodType<Prisma.SubmissionCreateNestedManyWithoutContestInput>;
+
 export const ContestChallengeUncheckedCreateNestedManyWithoutContestInputSchema: z.ZodType<Prisma.ContestChallengeUncheckedCreateNestedManyWithoutContestInput> = z.object({
   create: z.union([ z.lazy(() => ContestChallengeCreateWithoutContestInputSchema),z.lazy(() => ContestChallengeCreateWithoutContestInputSchema).array(),z.lazy(() => ContestChallengeUncheckedCreateWithoutContestInputSchema),z.lazy(() => ContestChallengeUncheckedCreateWithoutContestInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => ContestChallengeCreateOrConnectWithoutContestInputSchema),z.lazy(() => ContestChallengeCreateOrConnectWithoutContestInputSchema).array() ]).optional(),
@@ -2434,6 +2489,12 @@ export const ParticipantUncheckedCreateNestedManyWithoutContestInputSchema: z.Zo
   connectOrCreate: z.union([ z.lazy(() => ParticipantCreateOrConnectWithoutContestInputSchema),z.lazy(() => ParticipantCreateOrConnectWithoutContestInputSchema).array() ]).optional(),
   connect: z.union([ z.lazy(() => ParticipantWhereUniqueInputSchema),z.lazy(() => ParticipantWhereUniqueInputSchema).array() ]).optional(),
 }).strict() as z.ZodType<Prisma.ParticipantUncheckedCreateNestedManyWithoutContestInput>;
+
+export const SubmissionUncheckedCreateNestedManyWithoutContestInputSchema: z.ZodType<Prisma.SubmissionUncheckedCreateNestedManyWithoutContestInput> = z.object({
+  create: z.union([ z.lazy(() => SubmissionCreateWithoutContestInputSchema),z.lazy(() => SubmissionCreateWithoutContestInputSchema).array(),z.lazy(() => SubmissionUncheckedCreateWithoutContestInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutContestInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => SubmissionCreateOrConnectWithoutContestInputSchema),z.lazy(() => SubmissionCreateOrConnectWithoutContestInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+}).strict() as z.ZodType<Prisma.SubmissionUncheckedCreateNestedManyWithoutContestInput>;
 
 export const NullableDateTimeFieldUpdateOperationsInputSchema: z.ZodType<Prisma.NullableDateTimeFieldUpdateOperationsInput> = z.object({
   set: z.coerce.date().optional().nullable()
@@ -2465,6 +2526,19 @@ export const ParticipantUpdateManyWithoutContestNestedInputSchema: z.ZodType<Pri
   deleteMany: z.union([ z.lazy(() => ParticipantScalarWhereInputSchema),z.lazy(() => ParticipantScalarWhereInputSchema).array() ]).optional(),
 }).strict() as z.ZodType<Prisma.ParticipantUpdateManyWithoutContestNestedInput>;
 
+export const SubmissionUpdateManyWithoutContestNestedInputSchema: z.ZodType<Prisma.SubmissionUpdateManyWithoutContestNestedInput> = z.object({
+  create: z.union([ z.lazy(() => SubmissionCreateWithoutContestInputSchema),z.lazy(() => SubmissionCreateWithoutContestInputSchema).array(),z.lazy(() => SubmissionUncheckedCreateWithoutContestInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutContestInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => SubmissionCreateOrConnectWithoutContestInputSchema),z.lazy(() => SubmissionCreateOrConnectWithoutContestInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => SubmissionUpsertWithWhereUniqueWithoutContestInputSchema),z.lazy(() => SubmissionUpsertWithWhereUniqueWithoutContestInputSchema).array() ]).optional(),
+  set: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => SubmissionUpdateWithWhereUniqueWithoutContestInputSchema),z.lazy(() => SubmissionUpdateWithWhereUniqueWithoutContestInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => SubmissionUpdateManyWithWhereWithoutContestInputSchema),z.lazy(() => SubmissionUpdateManyWithWhereWithoutContestInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => SubmissionScalarWhereInputSchema),z.lazy(() => SubmissionScalarWhereInputSchema).array() ]).optional(),
+}).strict() as z.ZodType<Prisma.SubmissionUpdateManyWithoutContestNestedInput>;
+
 export const ContestChallengeUncheckedUpdateManyWithoutContestNestedInputSchema: z.ZodType<Prisma.ContestChallengeUncheckedUpdateManyWithoutContestNestedInput> = z.object({
   create: z.union([ z.lazy(() => ContestChallengeCreateWithoutContestInputSchema),z.lazy(() => ContestChallengeCreateWithoutContestInputSchema).array(),z.lazy(() => ContestChallengeUncheckedCreateWithoutContestInputSchema),z.lazy(() => ContestChallengeUncheckedCreateWithoutContestInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => ContestChallengeCreateOrConnectWithoutContestInputSchema),z.lazy(() => ContestChallengeCreateOrConnectWithoutContestInputSchema).array() ]).optional(),
@@ -2491,6 +2565,19 @@ export const ParticipantUncheckedUpdateManyWithoutContestNestedInputSchema: z.Zo
   deleteMany: z.union([ z.lazy(() => ParticipantScalarWhereInputSchema),z.lazy(() => ParticipantScalarWhereInputSchema).array() ]).optional(),
 }).strict() as z.ZodType<Prisma.ParticipantUncheckedUpdateManyWithoutContestNestedInput>;
 
+export const SubmissionUncheckedUpdateManyWithoutContestNestedInputSchema: z.ZodType<Prisma.SubmissionUncheckedUpdateManyWithoutContestNestedInput> = z.object({
+  create: z.union([ z.lazy(() => SubmissionCreateWithoutContestInputSchema),z.lazy(() => SubmissionCreateWithoutContestInputSchema).array(),z.lazy(() => SubmissionUncheckedCreateWithoutContestInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutContestInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => SubmissionCreateOrConnectWithoutContestInputSchema),z.lazy(() => SubmissionCreateOrConnectWithoutContestInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => SubmissionUpsertWithWhereUniqueWithoutContestInputSchema),z.lazy(() => SubmissionUpsertWithWhereUniqueWithoutContestInputSchema).array() ]).optional(),
+  set: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => SubmissionUpdateWithWhereUniqueWithoutContestInputSchema),z.lazy(() => SubmissionUpdateWithWhereUniqueWithoutContestInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => SubmissionUpdateManyWithWhereWithoutContestInputSchema),z.lazy(() => SubmissionUpdateManyWithWhereWithoutContestInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => SubmissionScalarWhereInputSchema),z.lazy(() => SubmissionScalarWhereInputSchema).array() ]).optional(),
+}).strict() as z.ZodType<Prisma.SubmissionUncheckedUpdateManyWithoutContestNestedInput>;
+
 export const ChallengeCreateNestedOneWithoutContestsInputSchema: z.ZodType<Prisma.ChallengeCreateNestedOneWithoutContestsInput> = z.object({
   create: z.union([ z.lazy(() => ChallengeCreateWithoutContestsInputSchema),z.lazy(() => ChallengeUncheckedCreateWithoutContestsInputSchema) ]).optional(),
   connectOrCreate: z.lazy(() => ChallengeCreateOrConnectWithoutContestsInputSchema).optional(),
@@ -2502,18 +2589,6 @@ export const ContestCreateNestedOneWithoutChallengesInputSchema: z.ZodType<Prism
   connectOrCreate: z.lazy(() => ContestCreateOrConnectWithoutChallengesInputSchema).optional(),
   connect: z.lazy(() => ContestWhereUniqueInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestCreateNestedOneWithoutChallengesInput>;
-
-export const SubmissionCreateNestedManyWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionCreateNestedManyWithoutChallengeInput> = z.object({
-  create: z.union([ z.lazy(() => SubmissionCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionCreateWithoutChallengeInputSchema).array(),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => SubmissionCreateOrConnectWithoutChallengeInputSchema),z.lazy(() => SubmissionCreateOrConnectWithoutChallengeInputSchema).array() ]).optional(),
-  connect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
-}).strict() as z.ZodType<Prisma.SubmissionCreateNestedManyWithoutChallengeInput>;
-
-export const SubmissionUncheckedCreateNestedManyWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionUncheckedCreateNestedManyWithoutChallengeInput> = z.object({
-  create: z.union([ z.lazy(() => SubmissionCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionCreateWithoutChallengeInputSchema).array(),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => SubmissionCreateOrConnectWithoutChallengeInputSchema),z.lazy(() => SubmissionCreateOrConnectWithoutChallengeInputSchema).array() ]).optional(),
-  connect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
-}).strict() as z.ZodType<Prisma.SubmissionUncheckedCreateNestedManyWithoutChallengeInput>;
 
 export const ChallengeUpdateOneRequiredWithoutContestsNestedInputSchema: z.ZodType<Prisma.ChallengeUpdateOneRequiredWithoutContestsNestedInput> = z.object({
   create: z.union([ z.lazy(() => ChallengeCreateWithoutContestsInputSchema),z.lazy(() => ChallengeUncheckedCreateWithoutContestsInputSchema) ]).optional(),
@@ -2530,32 +2605,6 @@ export const ContestUpdateOneRequiredWithoutChallengesNestedInputSchema: z.ZodTy
   connect: z.lazy(() => ContestWhereUniqueInputSchema).optional(),
   update: z.union([ z.lazy(() => ContestUpdateToOneWithWhereWithoutChallengesInputSchema),z.lazy(() => ContestUpdateWithoutChallengesInputSchema),z.lazy(() => ContestUncheckedUpdateWithoutChallengesInputSchema) ]).optional(),
 }).strict() as z.ZodType<Prisma.ContestUpdateOneRequiredWithoutChallengesNestedInput>;
-
-export const SubmissionUpdateManyWithoutChallengeNestedInputSchema: z.ZodType<Prisma.SubmissionUpdateManyWithoutChallengeNestedInput> = z.object({
-  create: z.union([ z.lazy(() => SubmissionCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionCreateWithoutChallengeInputSchema).array(),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => SubmissionCreateOrConnectWithoutChallengeInputSchema),z.lazy(() => SubmissionCreateOrConnectWithoutChallengeInputSchema).array() ]).optional(),
-  upsert: z.union([ z.lazy(() => SubmissionUpsertWithWhereUniqueWithoutChallengeInputSchema),z.lazy(() => SubmissionUpsertWithWhereUniqueWithoutChallengeInputSchema).array() ]).optional(),
-  set: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
-  disconnect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
-  delete: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
-  connect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
-  update: z.union([ z.lazy(() => SubmissionUpdateWithWhereUniqueWithoutChallengeInputSchema),z.lazy(() => SubmissionUpdateWithWhereUniqueWithoutChallengeInputSchema).array() ]).optional(),
-  updateMany: z.union([ z.lazy(() => SubmissionUpdateManyWithWhereWithoutChallengeInputSchema),z.lazy(() => SubmissionUpdateManyWithWhereWithoutChallengeInputSchema).array() ]).optional(),
-  deleteMany: z.union([ z.lazy(() => SubmissionScalarWhereInputSchema),z.lazy(() => SubmissionScalarWhereInputSchema).array() ]).optional(),
-}).strict() as z.ZodType<Prisma.SubmissionUpdateManyWithoutChallengeNestedInput>;
-
-export const SubmissionUncheckedUpdateManyWithoutChallengeNestedInputSchema: z.ZodType<Prisma.SubmissionUncheckedUpdateManyWithoutChallengeNestedInput> = z.object({
-  create: z.union([ z.lazy(() => SubmissionCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionCreateWithoutChallengeInputSchema).array(),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema).array() ]).optional(),
-  connectOrCreate: z.union([ z.lazy(() => SubmissionCreateOrConnectWithoutChallengeInputSchema),z.lazy(() => SubmissionCreateOrConnectWithoutChallengeInputSchema).array() ]).optional(),
-  upsert: z.union([ z.lazy(() => SubmissionUpsertWithWhereUniqueWithoutChallengeInputSchema),z.lazy(() => SubmissionUpsertWithWhereUniqueWithoutChallengeInputSchema).array() ]).optional(),
-  set: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
-  disconnect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
-  delete: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
-  connect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
-  update: z.union([ z.lazy(() => SubmissionUpdateWithWhereUniqueWithoutChallengeInputSchema),z.lazy(() => SubmissionUpdateWithWhereUniqueWithoutChallengeInputSchema).array() ]).optional(),
-  updateMany: z.union([ z.lazy(() => SubmissionUpdateManyWithWhereWithoutChallengeInputSchema),z.lazy(() => SubmissionUpdateManyWithWhereWithoutChallengeInputSchema).array() ]).optional(),
-  deleteMany: z.union([ z.lazy(() => SubmissionScalarWhereInputSchema),z.lazy(() => SubmissionScalarWhereInputSchema).array() ]).optional(),
-}).strict() as z.ZodType<Prisma.SubmissionUncheckedUpdateManyWithoutChallengeNestedInput>;
 
 export const TaskCreateNestedManyWithoutChallengeInputSchema: z.ZodType<Prisma.TaskCreateNestedManyWithoutChallengeInput> = z.object({
   create: z.union([ z.lazy(() => TaskCreateWithoutChallengeInputSchema),z.lazy(() => TaskCreateWithoutChallengeInputSchema).array(),z.lazy(() => TaskUncheckedCreateWithoutChallengeInputSchema),z.lazy(() => TaskUncheckedCreateWithoutChallengeInputSchema).array() ]).optional(),
@@ -2575,6 +2624,12 @@ export const TestCreateNestedManyWithoutChallengeInputSchema: z.ZodType<Prisma.T
   connect: z.union([ z.lazy(() => TestWhereUniqueInputSchema),z.lazy(() => TestWhereUniqueInputSchema).array() ]).optional(),
 }).strict() as z.ZodType<Prisma.TestCreateNestedManyWithoutChallengeInput>;
 
+export const SubmissionCreateNestedManyWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionCreateNestedManyWithoutChallengeInput> = z.object({
+  create: z.union([ z.lazy(() => SubmissionCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionCreateWithoutChallengeInputSchema).array(),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => SubmissionCreateOrConnectWithoutChallengeInputSchema),z.lazy(() => SubmissionCreateOrConnectWithoutChallengeInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+}).strict() as z.ZodType<Prisma.SubmissionCreateNestedManyWithoutChallengeInput>;
+
 export const TaskUncheckedCreateNestedManyWithoutChallengeInputSchema: z.ZodType<Prisma.TaskUncheckedCreateNestedManyWithoutChallengeInput> = z.object({
   create: z.union([ z.lazy(() => TaskCreateWithoutChallengeInputSchema),z.lazy(() => TaskCreateWithoutChallengeInputSchema).array(),z.lazy(() => TaskUncheckedCreateWithoutChallengeInputSchema),z.lazy(() => TaskUncheckedCreateWithoutChallengeInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => TaskCreateOrConnectWithoutChallengeInputSchema),z.lazy(() => TaskCreateOrConnectWithoutChallengeInputSchema).array() ]).optional(),
@@ -2592,6 +2647,12 @@ export const TestUncheckedCreateNestedManyWithoutChallengeInputSchema: z.ZodType
   connectOrCreate: z.union([ z.lazy(() => TestCreateOrConnectWithoutChallengeInputSchema),z.lazy(() => TestCreateOrConnectWithoutChallengeInputSchema).array() ]).optional(),
   connect: z.union([ z.lazy(() => TestWhereUniqueInputSchema),z.lazy(() => TestWhereUniqueInputSchema).array() ]).optional(),
 }).strict() as z.ZodType<Prisma.TestUncheckedCreateNestedManyWithoutChallengeInput>;
+
+export const SubmissionUncheckedCreateNestedManyWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionUncheckedCreateNestedManyWithoutChallengeInput> = z.object({
+  create: z.union([ z.lazy(() => SubmissionCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionCreateWithoutChallengeInputSchema).array(),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => SubmissionCreateOrConnectWithoutChallengeInputSchema),z.lazy(() => SubmissionCreateOrConnectWithoutChallengeInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+}).strict() as z.ZodType<Prisma.SubmissionUncheckedCreateNestedManyWithoutChallengeInput>;
 
 export const TaskUpdateManyWithoutChallengeNestedInputSchema: z.ZodType<Prisma.TaskUpdateManyWithoutChallengeNestedInput> = z.object({
   create: z.union([ z.lazy(() => TaskCreateWithoutChallengeInputSchema),z.lazy(() => TaskCreateWithoutChallengeInputSchema).array(),z.lazy(() => TaskUncheckedCreateWithoutChallengeInputSchema),z.lazy(() => TaskUncheckedCreateWithoutChallengeInputSchema).array() ]).optional(),
@@ -2632,6 +2693,19 @@ export const TestUpdateManyWithoutChallengeNestedInputSchema: z.ZodType<Prisma.T
   deleteMany: z.union([ z.lazy(() => TestScalarWhereInputSchema),z.lazy(() => TestScalarWhereInputSchema).array() ]).optional(),
 }).strict() as z.ZodType<Prisma.TestUpdateManyWithoutChallengeNestedInput>;
 
+export const SubmissionUpdateManyWithoutChallengeNestedInputSchema: z.ZodType<Prisma.SubmissionUpdateManyWithoutChallengeNestedInput> = z.object({
+  create: z.union([ z.lazy(() => SubmissionCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionCreateWithoutChallengeInputSchema).array(),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => SubmissionCreateOrConnectWithoutChallengeInputSchema),z.lazy(() => SubmissionCreateOrConnectWithoutChallengeInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => SubmissionUpsertWithWhereUniqueWithoutChallengeInputSchema),z.lazy(() => SubmissionUpsertWithWhereUniqueWithoutChallengeInputSchema).array() ]).optional(),
+  set: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => SubmissionUpdateWithWhereUniqueWithoutChallengeInputSchema),z.lazy(() => SubmissionUpdateWithWhereUniqueWithoutChallengeInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => SubmissionUpdateManyWithWhereWithoutChallengeInputSchema),z.lazy(() => SubmissionUpdateManyWithWhereWithoutChallengeInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => SubmissionScalarWhereInputSchema),z.lazy(() => SubmissionScalarWhereInputSchema).array() ]).optional(),
+}).strict() as z.ZodType<Prisma.SubmissionUpdateManyWithoutChallengeNestedInput>;
+
 export const TaskUncheckedUpdateManyWithoutChallengeNestedInputSchema: z.ZodType<Prisma.TaskUncheckedUpdateManyWithoutChallengeNestedInput> = z.object({
   create: z.union([ z.lazy(() => TaskCreateWithoutChallengeInputSchema),z.lazy(() => TaskCreateWithoutChallengeInputSchema).array(),z.lazy(() => TaskUncheckedCreateWithoutChallengeInputSchema),z.lazy(() => TaskUncheckedCreateWithoutChallengeInputSchema).array() ]).optional(),
   connectOrCreate: z.union([ z.lazy(() => TaskCreateOrConnectWithoutChallengeInputSchema),z.lazy(() => TaskCreateOrConnectWithoutChallengeInputSchema).array() ]).optional(),
@@ -2670,6 +2744,19 @@ export const TestUncheckedUpdateManyWithoutChallengeNestedInputSchema: z.ZodType
   updateMany: z.union([ z.lazy(() => TestUpdateManyWithWhereWithoutChallengeInputSchema),z.lazy(() => TestUpdateManyWithWhereWithoutChallengeInputSchema).array() ]).optional(),
   deleteMany: z.union([ z.lazy(() => TestScalarWhereInputSchema),z.lazy(() => TestScalarWhereInputSchema).array() ]).optional(),
 }).strict() as z.ZodType<Prisma.TestUncheckedUpdateManyWithoutChallengeNestedInput>;
+
+export const SubmissionUncheckedUpdateManyWithoutChallengeNestedInputSchema: z.ZodType<Prisma.SubmissionUncheckedUpdateManyWithoutChallengeNestedInput> = z.object({
+  create: z.union([ z.lazy(() => SubmissionCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionCreateWithoutChallengeInputSchema).array(),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema).array() ]).optional(),
+  connectOrCreate: z.union([ z.lazy(() => SubmissionCreateOrConnectWithoutChallengeInputSchema),z.lazy(() => SubmissionCreateOrConnectWithoutChallengeInputSchema).array() ]).optional(),
+  upsert: z.union([ z.lazy(() => SubmissionUpsertWithWhereUniqueWithoutChallengeInputSchema),z.lazy(() => SubmissionUpsertWithWhereUniqueWithoutChallengeInputSchema).array() ]).optional(),
+  set: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+  disconnect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+  delete: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+  connect: z.union([ z.lazy(() => SubmissionWhereUniqueInputSchema),z.lazy(() => SubmissionWhereUniqueInputSchema).array() ]).optional(),
+  update: z.union([ z.lazy(() => SubmissionUpdateWithWhereUniqueWithoutChallengeInputSchema),z.lazy(() => SubmissionUpdateWithWhereUniqueWithoutChallengeInputSchema).array() ]).optional(),
+  updateMany: z.union([ z.lazy(() => SubmissionUpdateManyWithWhereWithoutChallengeInputSchema),z.lazy(() => SubmissionUpdateManyWithWhereWithoutChallengeInputSchema).array() ]).optional(),
+  deleteMany: z.union([ z.lazy(() => SubmissionScalarWhereInputSchema),z.lazy(() => SubmissionScalarWhereInputSchema).array() ]).optional(),
+}).strict() as z.ZodType<Prisma.SubmissionUncheckedUpdateManyWithoutChallengeNestedInput>;
 
 export const ChallengeCreateNestedOneWithoutTasksInputSchema: z.ZodType<Prisma.ChallengeCreateNestedOneWithoutTasksInput> = z.object({
   create: z.union([ z.lazy(() => ChallengeCreateWithoutTasksInputSchema),z.lazy(() => ChallengeUncheckedCreateWithoutTasksInputSchema) ]).optional(),
@@ -2833,7 +2920,7 @@ export const NestedBoolWithAggregatesFilterSchema: z.ZodType<Prisma.NestedBoolWi
   _max: z.lazy(() => NestedBoolFilterSchema).optional()
 }).strict() as z.ZodType<Prisma.NestedBoolWithAggregatesFilter>;
 
-export const NestedIntNullableFilterSchema: z.ZodType<Prisma.NestedIntNullableFilter> = z.object({
+export const NestedFloatNullableFilterSchema: z.ZodType<Prisma.NestedFloatNullableFilter> = z.object({
   equals: z.number().optional().nullable(),
   in: z.number().array().optional().nullable(),
   notIn: z.number().array().optional().nullable(),
@@ -2841,8 +2928,8 @@ export const NestedIntNullableFilterSchema: z.ZodType<Prisma.NestedIntNullableFi
   lte: z.number().optional(),
   gt: z.number().optional(),
   gte: z.number().optional(),
-  not: z.union([ z.number(),z.lazy(() => NestedIntNullableFilterSchema) ]).optional().nullable(),
-}).strict() as z.ZodType<Prisma.NestedIntNullableFilter>;
+  not: z.union([ z.number(),z.lazy(() => NestedFloatNullableFilterSchema) ]).optional().nullable(),
+}).strict() as z.ZodType<Prisma.NestedFloatNullableFilter>;
 
 export const NestedDateTimeFilterSchema: z.ZodType<Prisma.NestedDateTimeFilter> = z.object({
   equals: z.coerce.date().optional(),
@@ -2855,7 +2942,7 @@ export const NestedDateTimeFilterSchema: z.ZodType<Prisma.NestedDateTimeFilter> 
   not: z.union([ z.coerce.date(),z.lazy(() => NestedDateTimeFilterSchema) ]).optional(),
 }).strict() as z.ZodType<Prisma.NestedDateTimeFilter>;
 
-export const NestedIntNullableWithAggregatesFilterSchema: z.ZodType<Prisma.NestedIntNullableWithAggregatesFilter> = z.object({
+export const NestedFloatNullableWithAggregatesFilterSchema: z.ZodType<Prisma.NestedFloatNullableWithAggregatesFilter> = z.object({
   equals: z.number().optional().nullable(),
   in: z.number().array().optional().nullable(),
   notIn: z.number().array().optional().nullable(),
@@ -2863,15 +2950,15 @@ export const NestedIntNullableWithAggregatesFilterSchema: z.ZodType<Prisma.Neste
   lte: z.number().optional(),
   gt: z.number().optional(),
   gte: z.number().optional(),
-  not: z.union([ z.number(),z.lazy(() => NestedIntNullableWithAggregatesFilterSchema) ]).optional().nullable(),
+  not: z.union([ z.number(),z.lazy(() => NestedFloatNullableWithAggregatesFilterSchema) ]).optional().nullable(),
   _count: z.lazy(() => NestedIntNullableFilterSchema).optional(),
   _avg: z.lazy(() => NestedFloatNullableFilterSchema).optional(),
-  _sum: z.lazy(() => NestedIntNullableFilterSchema).optional(),
-  _min: z.lazy(() => NestedIntNullableFilterSchema).optional(),
-  _max: z.lazy(() => NestedIntNullableFilterSchema).optional()
-}).strict() as z.ZodType<Prisma.NestedIntNullableWithAggregatesFilter>;
+  _sum: z.lazy(() => NestedFloatNullableFilterSchema).optional(),
+  _min: z.lazy(() => NestedFloatNullableFilterSchema).optional(),
+  _max: z.lazy(() => NestedFloatNullableFilterSchema).optional()
+}).strict() as z.ZodType<Prisma.NestedFloatNullableWithAggregatesFilter>;
 
-export const NestedFloatNullableFilterSchema: z.ZodType<Prisma.NestedFloatNullableFilter> = z.object({
+export const NestedIntNullableFilterSchema: z.ZodType<Prisma.NestedIntNullableFilter> = z.object({
   equals: z.number().optional().nullable(),
   in: z.number().array().optional().nullable(),
   notIn: z.number().array().optional().nullable(),
@@ -2879,8 +2966,8 @@ export const NestedFloatNullableFilterSchema: z.ZodType<Prisma.NestedFloatNullab
   lte: z.number().optional(),
   gt: z.number().optional(),
   gte: z.number().optional(),
-  not: z.union([ z.number(),z.lazy(() => NestedFloatNullableFilterSchema) ]).optional().nullable(),
-}).strict() as z.ZodType<Prisma.NestedFloatNullableFilter>;
+  not: z.union([ z.number(),z.lazy(() => NestedIntNullableFilterSchema) ]).optional().nullable(),
+}).strict() as z.ZodType<Prisma.NestedIntNullableFilter>;
 
 export const NestedDateTimeWithAggregatesFilterSchema: z.ZodType<Prisma.NestedDateTimeWithAggregatesFilter> = z.object({
   equals: z.coerce.date().optional(),
@@ -2940,9 +3027,10 @@ export const NestedDateTimeNullableWithAggregatesFilterSchema: z.ZodType<Prisma.
 export const SubmissionCreateWithoutOwnerInputSchema: z.ZodType<Prisma.SubmissionCreateWithoutOwnerInput> = z.object({
   token: z.string(),
   src: z.string(),
-  score: z.number().int().optional().nullable(),
+  score: z.number().optional().nullable(),
   time: z.coerce.date(),
-  challenge: z.lazy(() => ContestChallengeCreateNestedOneWithoutSubmissionsInputSchema),
+  challenge: z.lazy(() => ChallengeCreateNestedOneWithoutSubmissionsInputSchema),
+  contest: z.lazy(() => ContestCreateNestedOneWithoutSubmissionInputSchema),
   results: z.lazy(() => ResultCreateNestedManyWithoutSubmissionInputSchema).optional()
 }).strict() as z.ZodType<Prisma.SubmissionCreateWithoutOwnerInput>;
 
@@ -2951,7 +3039,7 @@ export const SubmissionUncheckedCreateWithoutOwnerInputSchema: z.ZodType<Prisma.
   src: z.string(),
   contest_id: z.string(),
   challenge_id: z.string(),
-  score: z.number().int().optional().nullable(),
+  score: z.number().optional().nullable(),
   time: z.coerce.date(),
   results: z.lazy(() => ResultUncheckedCreateNestedManyWithoutSubmissionInputSchema).optional()
 }).strict() as z.ZodType<Prisma.SubmissionUncheckedCreateWithoutOwnerInput>;
@@ -3001,7 +3089,7 @@ export const SubmissionScalarWhereInputSchema: z.ZodType<Prisma.SubmissionScalar
   src: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   contest_id: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   challenge_id: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
-  score: z.union([ z.lazy(() => IntNullableFilterSchema),z.number() ]).optional().nullable(),
+  score: z.union([ z.lazy(() => FloatNullableFilterSchema),z.number() ]).optional().nullable(),
   time: z.union([ z.lazy(() => DateTimeFilterSchema),z.coerce.date() ]).optional(),
 }).strict() as z.ZodType<Prisma.SubmissionScalarWhereInput>;
 
@@ -3052,22 +3140,65 @@ export const UserCreateOrConnectWithoutSubmissionsInputSchema: z.ZodType<Prisma.
   create: z.union([ z.lazy(() => UserCreateWithoutSubmissionsInputSchema),z.lazy(() => UserUncheckedCreateWithoutSubmissionsInputSchema) ]),
 }).strict() as z.ZodType<Prisma.UserCreateOrConnectWithoutSubmissionsInput>;
 
-export const ContestChallengeCreateWithoutSubmissionsInputSchema: z.ZodType<Prisma.ContestChallengeCreateWithoutSubmissionsInput> = z.object({
-  max_score: z.number().int(),
-  challenge: z.lazy(() => ChallengeCreateNestedOneWithoutContestsInputSchema),
-  contest: z.lazy(() => ContestCreateNestedOneWithoutChallengesInputSchema)
-}).strict() as z.ZodType<Prisma.ContestChallengeCreateWithoutSubmissionsInput>;
+export const ChallengeCreateWithoutSubmissionsInputSchema: z.ZodType<Prisma.ChallengeCreateWithoutSubmissionsInput> = z.object({
+  id: z.string(),
+  title: z.string(),
+  type: z.string(),
+  description: z.string(),
+  input_format: z.string(),
+  output_format: z.string(),
+  constraints: z.string(),
+  time_limit: z.number().int(),
+  memory_limit: z.number().int(),
+  tasks: z.lazy(() => TaskCreateNestedManyWithoutChallengeInputSchema).optional(),
+  contests: z.lazy(() => ContestChallengeCreateNestedManyWithoutChallengeInputSchema).optional(),
+  tests: z.lazy(() => TestCreateNestedManyWithoutChallengeInputSchema).optional()
+}).strict() as z.ZodType<Prisma.ChallengeCreateWithoutSubmissionsInput>;
 
-export const ContestChallengeUncheckedCreateWithoutSubmissionsInputSchema: z.ZodType<Prisma.ContestChallengeUncheckedCreateWithoutSubmissionsInput> = z.object({
-  challenge_id: z.string(),
-  contest_id: z.string(),
-  max_score: z.number().int()
-}).strict() as z.ZodType<Prisma.ContestChallengeUncheckedCreateWithoutSubmissionsInput>;
+export const ChallengeUncheckedCreateWithoutSubmissionsInputSchema: z.ZodType<Prisma.ChallengeUncheckedCreateWithoutSubmissionsInput> = z.object({
+  id: z.string(),
+  title: z.string(),
+  type: z.string(),
+  description: z.string(),
+  input_format: z.string(),
+  output_format: z.string(),
+  constraints: z.string(),
+  time_limit: z.number().int(),
+  memory_limit: z.number().int(),
+  tasks: z.lazy(() => TaskUncheckedCreateNestedManyWithoutChallengeInputSchema).optional(),
+  contests: z.lazy(() => ContestChallengeUncheckedCreateNestedManyWithoutChallengeInputSchema).optional(),
+  tests: z.lazy(() => TestUncheckedCreateNestedManyWithoutChallengeInputSchema).optional()
+}).strict() as z.ZodType<Prisma.ChallengeUncheckedCreateWithoutSubmissionsInput>;
 
-export const ContestChallengeCreateOrConnectWithoutSubmissionsInputSchema: z.ZodType<Prisma.ContestChallengeCreateOrConnectWithoutSubmissionsInput> = z.object({
-  where: z.lazy(() => ContestChallengeWhereUniqueInputSchema),
-  create: z.union([ z.lazy(() => ContestChallengeCreateWithoutSubmissionsInputSchema),z.lazy(() => ContestChallengeUncheckedCreateWithoutSubmissionsInputSchema) ]),
-}).strict() as z.ZodType<Prisma.ContestChallengeCreateOrConnectWithoutSubmissionsInput>;
+export const ChallengeCreateOrConnectWithoutSubmissionsInputSchema: z.ZodType<Prisma.ChallengeCreateOrConnectWithoutSubmissionsInput> = z.object({
+  where: z.lazy(() => ChallengeWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => ChallengeCreateWithoutSubmissionsInputSchema),z.lazy(() => ChallengeUncheckedCreateWithoutSubmissionsInputSchema) ]),
+}).strict() as z.ZodType<Prisma.ChallengeCreateOrConnectWithoutSubmissionsInput>;
+
+export const ContestCreateWithoutSubmissionInputSchema: z.ZodType<Prisma.ContestCreateWithoutSubmissionInput> = z.object({
+  id: z.string(),
+  title: z.string(),
+  start_time: z.coerce.date().optional().nullable(),
+  end_time: z.coerce.date().optional().nullable(),
+  description: z.string(),
+  challenges: z.lazy(() => ContestChallengeCreateNestedManyWithoutContestInputSchema).optional(),
+  participants: z.lazy(() => ParticipantCreateNestedManyWithoutContestInputSchema).optional()
+}).strict() as z.ZodType<Prisma.ContestCreateWithoutSubmissionInput>;
+
+export const ContestUncheckedCreateWithoutSubmissionInputSchema: z.ZodType<Prisma.ContestUncheckedCreateWithoutSubmissionInput> = z.object({
+  id: z.string(),
+  title: z.string(),
+  start_time: z.coerce.date().optional().nullable(),
+  end_time: z.coerce.date().optional().nullable(),
+  description: z.string(),
+  challenges: z.lazy(() => ContestChallengeUncheckedCreateNestedManyWithoutContestInputSchema).optional(),
+  participants: z.lazy(() => ParticipantUncheckedCreateNestedManyWithoutContestInputSchema).optional()
+}).strict() as z.ZodType<Prisma.ContestUncheckedCreateWithoutSubmissionInput>;
+
+export const ContestCreateOrConnectWithoutSubmissionInputSchema: z.ZodType<Prisma.ContestCreateOrConnectWithoutSubmissionInput> = z.object({
+  where: z.lazy(() => ContestWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => ContestCreateWithoutSubmissionInputSchema),z.lazy(() => ContestUncheckedCreateWithoutSubmissionInputSchema) ]),
+}).strict() as z.ZodType<Prisma.ContestCreateOrConnectWithoutSubmissionInput>;
 
 export const ResultCreateWithoutSubmissionInputSchema: z.ZodType<Prisma.ResultCreateWithoutSubmissionInput> = z.object({
   challenge_id: z.string(),
@@ -3124,28 +3255,77 @@ export const UserUncheckedUpdateWithoutSubmissionsInputSchema: z.ZodType<Prisma.
   participants: z.lazy(() => ParticipantUncheckedUpdateManyWithoutUserNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.UserUncheckedUpdateWithoutSubmissionsInput>;
 
-export const ContestChallengeUpsertWithoutSubmissionsInputSchema: z.ZodType<Prisma.ContestChallengeUpsertWithoutSubmissionsInput> = z.object({
-  update: z.union([ z.lazy(() => ContestChallengeUpdateWithoutSubmissionsInputSchema),z.lazy(() => ContestChallengeUncheckedUpdateWithoutSubmissionsInputSchema) ]),
-  create: z.union([ z.lazy(() => ContestChallengeCreateWithoutSubmissionsInputSchema),z.lazy(() => ContestChallengeUncheckedCreateWithoutSubmissionsInputSchema) ]),
-  where: z.lazy(() => ContestChallengeWhereInputSchema).optional()
-}).strict() as z.ZodType<Prisma.ContestChallengeUpsertWithoutSubmissionsInput>;
+export const ChallengeUpsertWithoutSubmissionsInputSchema: z.ZodType<Prisma.ChallengeUpsertWithoutSubmissionsInput> = z.object({
+  update: z.union([ z.lazy(() => ChallengeUpdateWithoutSubmissionsInputSchema),z.lazy(() => ChallengeUncheckedUpdateWithoutSubmissionsInputSchema) ]),
+  create: z.union([ z.lazy(() => ChallengeCreateWithoutSubmissionsInputSchema),z.lazy(() => ChallengeUncheckedCreateWithoutSubmissionsInputSchema) ]),
+  where: z.lazy(() => ChallengeWhereInputSchema).optional()
+}).strict() as z.ZodType<Prisma.ChallengeUpsertWithoutSubmissionsInput>;
 
-export const ContestChallengeUpdateToOneWithWhereWithoutSubmissionsInputSchema: z.ZodType<Prisma.ContestChallengeUpdateToOneWithWhereWithoutSubmissionsInput> = z.object({
-  where: z.lazy(() => ContestChallengeWhereInputSchema).optional(),
-  data: z.union([ z.lazy(() => ContestChallengeUpdateWithoutSubmissionsInputSchema),z.lazy(() => ContestChallengeUncheckedUpdateWithoutSubmissionsInputSchema) ]),
-}).strict() as z.ZodType<Prisma.ContestChallengeUpdateToOneWithWhereWithoutSubmissionsInput>;
+export const ChallengeUpdateToOneWithWhereWithoutSubmissionsInputSchema: z.ZodType<Prisma.ChallengeUpdateToOneWithWhereWithoutSubmissionsInput> = z.object({
+  where: z.lazy(() => ChallengeWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => ChallengeUpdateWithoutSubmissionsInputSchema),z.lazy(() => ChallengeUncheckedUpdateWithoutSubmissionsInputSchema) ]),
+}).strict() as z.ZodType<Prisma.ChallengeUpdateToOneWithWhereWithoutSubmissionsInput>;
 
-export const ContestChallengeUpdateWithoutSubmissionsInputSchema: z.ZodType<Prisma.ContestChallengeUpdateWithoutSubmissionsInput> = z.object({
-  max_score: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  challenge: z.lazy(() => ChallengeUpdateOneRequiredWithoutContestsNestedInputSchema).optional(),
-  contest: z.lazy(() => ContestUpdateOneRequiredWithoutChallengesNestedInputSchema).optional()
-}).strict() as z.ZodType<Prisma.ContestChallengeUpdateWithoutSubmissionsInput>;
+export const ChallengeUpdateWithoutSubmissionsInputSchema: z.ZodType<Prisma.ChallengeUpdateWithoutSubmissionsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  type: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  input_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  output_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  time_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  memory_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  tasks: z.lazy(() => TaskUpdateManyWithoutChallengeNestedInputSchema).optional(),
+  contests: z.lazy(() => ContestChallengeUpdateManyWithoutChallengeNestedInputSchema).optional(),
+  tests: z.lazy(() => TestUpdateManyWithoutChallengeNestedInputSchema).optional()
+}).strict() as z.ZodType<Prisma.ChallengeUpdateWithoutSubmissionsInput>;
 
-export const ContestChallengeUncheckedUpdateWithoutSubmissionsInputSchema: z.ZodType<Prisma.ContestChallengeUncheckedUpdateWithoutSubmissionsInput> = z.object({
-  challenge_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  contest_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  max_score: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-}).strict() as z.ZodType<Prisma.ContestChallengeUncheckedUpdateWithoutSubmissionsInput>;
+export const ChallengeUncheckedUpdateWithoutSubmissionsInputSchema: z.ZodType<Prisma.ChallengeUncheckedUpdateWithoutSubmissionsInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  type: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  input_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  output_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  time_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  memory_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  tasks: z.lazy(() => TaskUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional(),
+  contests: z.lazy(() => ContestChallengeUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional(),
+  tests: z.lazy(() => TestUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional()
+}).strict() as z.ZodType<Prisma.ChallengeUncheckedUpdateWithoutSubmissionsInput>;
+
+export const ContestUpsertWithoutSubmissionInputSchema: z.ZodType<Prisma.ContestUpsertWithoutSubmissionInput> = z.object({
+  update: z.union([ z.lazy(() => ContestUpdateWithoutSubmissionInputSchema),z.lazy(() => ContestUncheckedUpdateWithoutSubmissionInputSchema) ]),
+  create: z.union([ z.lazy(() => ContestCreateWithoutSubmissionInputSchema),z.lazy(() => ContestUncheckedCreateWithoutSubmissionInputSchema) ]),
+  where: z.lazy(() => ContestWhereInputSchema).optional()
+}).strict() as z.ZodType<Prisma.ContestUpsertWithoutSubmissionInput>;
+
+export const ContestUpdateToOneWithWhereWithoutSubmissionInputSchema: z.ZodType<Prisma.ContestUpdateToOneWithWhereWithoutSubmissionInput> = z.object({
+  where: z.lazy(() => ContestWhereInputSchema).optional(),
+  data: z.union([ z.lazy(() => ContestUpdateWithoutSubmissionInputSchema),z.lazy(() => ContestUncheckedUpdateWithoutSubmissionInputSchema) ]),
+}).strict() as z.ZodType<Prisma.ContestUpdateToOneWithWhereWithoutSubmissionInput>;
+
+export const ContestUpdateWithoutSubmissionInputSchema: z.ZodType<Prisma.ContestUpdateWithoutSubmissionInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  start_time: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  end_time: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  challenges: z.lazy(() => ContestChallengeUpdateManyWithoutContestNestedInputSchema).optional(),
+  participants: z.lazy(() => ParticipantUpdateManyWithoutContestNestedInputSchema).optional()
+}).strict() as z.ZodType<Prisma.ContestUpdateWithoutSubmissionInput>;
+
+export const ContestUncheckedUpdateWithoutSubmissionInputSchema: z.ZodType<Prisma.ContestUncheckedUpdateWithoutSubmissionInput> = z.object({
+  id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  title: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  start_time: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  end_time: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  challenges: z.lazy(() => ContestChallengeUncheckedUpdateManyWithoutContestNestedInputSchema).optional(),
+  participants: z.lazy(() => ParticipantUncheckedUpdateManyWithoutContestNestedInputSchema).optional()
+}).strict() as z.ZodType<Prisma.ContestUncheckedUpdateWithoutSubmissionInput>;
 
 export const ResultUpsertWithWhereUniqueWithoutSubmissionInputSchema: z.ZodType<Prisma.ResultUpsertWithWhereUniqueWithoutSubmissionInput> = z.object({
   where: z.lazy(() => ResultWhereUniqueInputSchema),
@@ -3181,10 +3361,11 @@ export const ResultScalarWhereInputSchema: z.ZodType<Prisma.ResultScalarWhereInp
 export const SubmissionCreateWithoutResultsInputSchema: z.ZodType<Prisma.SubmissionCreateWithoutResultsInput> = z.object({
   token: z.string(),
   src: z.string(),
-  score: z.number().int().optional().nullable(),
+  score: z.number().optional().nullable(),
   time: z.coerce.date(),
   owner: z.lazy(() => UserCreateNestedOneWithoutSubmissionsInputSchema),
-  challenge: z.lazy(() => ContestChallengeCreateNestedOneWithoutSubmissionsInputSchema)
+  challenge: z.lazy(() => ChallengeCreateNestedOneWithoutSubmissionsInputSchema),
+  contest: z.lazy(() => ContestCreateNestedOneWithoutSubmissionInputSchema)
 }).strict() as z.ZodType<Prisma.SubmissionCreateWithoutResultsInput>;
 
 export const SubmissionUncheckedCreateWithoutResultsInputSchema: z.ZodType<Prisma.SubmissionUncheckedCreateWithoutResultsInput> = z.object({
@@ -3193,7 +3374,7 @@ export const SubmissionUncheckedCreateWithoutResultsInputSchema: z.ZodType<Prism
   src: z.string(),
   contest_id: z.string(),
   challenge_id: z.string(),
-  score: z.number().int().optional().nullable(),
+  score: z.number().optional().nullable(),
   time: z.coerce.date()
 }).strict() as z.ZodType<Prisma.SubmissionUncheckedCreateWithoutResultsInput>;
 
@@ -3216,10 +3397,11 @@ export const SubmissionUpdateToOneWithWhereWithoutResultsInputSchema: z.ZodType<
 export const SubmissionUpdateWithoutResultsInputSchema: z.ZodType<Prisma.SubmissionUpdateWithoutResultsInput> = z.object({
   token: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   src: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  score: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  score: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   time: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   owner: z.lazy(() => UserUpdateOneRequiredWithoutSubmissionsNestedInputSchema).optional(),
-  challenge: z.lazy(() => ContestChallengeUpdateOneRequiredWithoutSubmissionsNestedInputSchema).optional()
+  challenge: z.lazy(() => ChallengeUpdateOneRequiredWithoutSubmissionsNestedInputSchema).optional(),
+  contest: z.lazy(() => ContestUpdateOneRequiredWithoutSubmissionNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.SubmissionUpdateWithoutResultsInput>;
 
 export const SubmissionUncheckedUpdateWithoutResultsInputSchema: z.ZodType<Prisma.SubmissionUncheckedUpdateWithoutResultsInput> = z.object({
@@ -3228,7 +3410,7 @@ export const SubmissionUncheckedUpdateWithoutResultsInputSchema: z.ZodType<Prism
   src: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   contest_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   challenge_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  score: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  score: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   time: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict() as z.ZodType<Prisma.SubmissionUncheckedUpdateWithoutResultsInput>;
 
@@ -3260,7 +3442,8 @@ export const ContestCreateWithoutParticipantsInputSchema: z.ZodType<Prisma.Conte
   start_time: z.coerce.date().optional().nullable(),
   end_time: z.coerce.date().optional().nullable(),
   description: z.string(),
-  challenges: z.lazy(() => ContestChallengeCreateNestedManyWithoutContestInputSchema).optional()
+  challenges: z.lazy(() => ContestChallengeCreateNestedManyWithoutContestInputSchema).optional(),
+  Submission: z.lazy(() => SubmissionCreateNestedManyWithoutContestInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestCreateWithoutParticipantsInput>;
 
 export const ContestUncheckedCreateWithoutParticipantsInputSchema: z.ZodType<Prisma.ContestUncheckedCreateWithoutParticipantsInput> = z.object({
@@ -3269,7 +3452,8 @@ export const ContestUncheckedCreateWithoutParticipantsInputSchema: z.ZodType<Pri
   start_time: z.coerce.date().optional().nullable(),
   end_time: z.coerce.date().optional().nullable(),
   description: z.string(),
-  challenges: z.lazy(() => ContestChallengeUncheckedCreateNestedManyWithoutContestInputSchema).optional()
+  challenges: z.lazy(() => ContestChallengeUncheckedCreateNestedManyWithoutContestInputSchema).optional(),
+  Submission: z.lazy(() => SubmissionUncheckedCreateNestedManyWithoutContestInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestUncheckedCreateWithoutParticipantsInput>;
 
 export const ContestCreateOrConnectWithoutParticipantsInputSchema: z.ZodType<Prisma.ContestCreateOrConnectWithoutParticipantsInput> = z.object({
@@ -3322,7 +3506,8 @@ export const ContestUpdateWithoutParticipantsInputSchema: z.ZodType<Prisma.Conte
   start_time: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   end_time: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  challenges: z.lazy(() => ContestChallengeUpdateManyWithoutContestNestedInputSchema).optional()
+  challenges: z.lazy(() => ContestChallengeUpdateManyWithoutContestNestedInputSchema).optional(),
+  Submission: z.lazy(() => SubmissionUpdateManyWithoutContestNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestUpdateWithoutParticipantsInput>;
 
 export const ContestUncheckedUpdateWithoutParticipantsInputSchema: z.ZodType<Prisma.ContestUncheckedUpdateWithoutParticipantsInput> = z.object({
@@ -3331,19 +3516,18 @@ export const ContestUncheckedUpdateWithoutParticipantsInputSchema: z.ZodType<Pri
   start_time: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   end_time: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  challenges: z.lazy(() => ContestChallengeUncheckedUpdateManyWithoutContestNestedInputSchema).optional()
+  challenges: z.lazy(() => ContestChallengeUncheckedUpdateManyWithoutContestNestedInputSchema).optional(),
+  Submission: z.lazy(() => SubmissionUncheckedUpdateManyWithoutContestNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestUncheckedUpdateWithoutParticipantsInput>;
 
 export const ContestChallengeCreateWithoutContestInputSchema: z.ZodType<Prisma.ContestChallengeCreateWithoutContestInput> = z.object({
   max_score: z.number().int(),
-  challenge: z.lazy(() => ChallengeCreateNestedOneWithoutContestsInputSchema),
-  submissions: z.lazy(() => SubmissionCreateNestedManyWithoutChallengeInputSchema).optional()
+  challenge: z.lazy(() => ChallengeCreateNestedOneWithoutContestsInputSchema)
 }).strict() as z.ZodType<Prisma.ContestChallengeCreateWithoutContestInput>;
 
 export const ContestChallengeUncheckedCreateWithoutContestInputSchema: z.ZodType<Prisma.ContestChallengeUncheckedCreateWithoutContestInput> = z.object({
   challenge_id: z.string(),
-  max_score: z.number().int(),
-  submissions: z.lazy(() => SubmissionUncheckedCreateNestedManyWithoutChallengeInputSchema).optional()
+  max_score: z.number().int()
 }).strict() as z.ZodType<Prisma.ContestChallengeUncheckedCreateWithoutContestInput>;
 
 export const ContestChallengeCreateOrConnectWithoutContestInputSchema: z.ZodType<Prisma.ContestChallengeCreateOrConnectWithoutContestInput> = z.object({
@@ -3365,6 +3549,31 @@ export const ParticipantCreateOrConnectWithoutContestInputSchema: z.ZodType<Pris
   where: z.lazy(() => ParticipantWhereUniqueInputSchema),
   create: z.union([ z.lazy(() => ParticipantCreateWithoutContestInputSchema),z.lazy(() => ParticipantUncheckedCreateWithoutContestInputSchema) ]),
 }).strict() as z.ZodType<Prisma.ParticipantCreateOrConnectWithoutContestInput>;
+
+export const SubmissionCreateWithoutContestInputSchema: z.ZodType<Prisma.SubmissionCreateWithoutContestInput> = z.object({
+  token: z.string(),
+  src: z.string(),
+  score: z.number().optional().nullable(),
+  time: z.coerce.date(),
+  owner: z.lazy(() => UserCreateNestedOneWithoutSubmissionsInputSchema),
+  challenge: z.lazy(() => ChallengeCreateNestedOneWithoutSubmissionsInputSchema),
+  results: z.lazy(() => ResultCreateNestedManyWithoutSubmissionInputSchema).optional()
+}).strict() as z.ZodType<Prisma.SubmissionCreateWithoutContestInput>;
+
+export const SubmissionUncheckedCreateWithoutContestInputSchema: z.ZodType<Prisma.SubmissionUncheckedCreateWithoutContestInput> = z.object({
+  token: z.string(),
+  owner_id: z.number().int(),
+  src: z.string(),
+  challenge_id: z.string(),
+  score: z.number().optional().nullable(),
+  time: z.coerce.date(),
+  results: z.lazy(() => ResultUncheckedCreateNestedManyWithoutSubmissionInputSchema).optional()
+}).strict() as z.ZodType<Prisma.SubmissionUncheckedCreateWithoutContestInput>;
+
+export const SubmissionCreateOrConnectWithoutContestInputSchema: z.ZodType<Prisma.SubmissionCreateOrConnectWithoutContestInput> = z.object({
+  where: z.lazy(() => SubmissionWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => SubmissionCreateWithoutContestInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutContestInputSchema) ]),
+}).strict() as z.ZodType<Prisma.SubmissionCreateOrConnectWithoutContestInput>;
 
 export const ContestChallengeUpsertWithWhereUniqueWithoutContestInputSchema: z.ZodType<Prisma.ContestChallengeUpsertWithWhereUniqueWithoutContestInput> = z.object({
   where: z.lazy(() => ContestChallengeWhereUniqueInputSchema),
@@ -3407,6 +3616,22 @@ export const ParticipantUpdateManyWithWhereWithoutContestInputSchema: z.ZodType<
   data: z.union([ z.lazy(() => ParticipantUpdateManyMutationInputSchema),z.lazy(() => ParticipantUncheckedUpdateManyWithoutContestInputSchema) ]),
 }).strict() as z.ZodType<Prisma.ParticipantUpdateManyWithWhereWithoutContestInput>;
 
+export const SubmissionUpsertWithWhereUniqueWithoutContestInputSchema: z.ZodType<Prisma.SubmissionUpsertWithWhereUniqueWithoutContestInput> = z.object({
+  where: z.lazy(() => SubmissionWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => SubmissionUpdateWithoutContestInputSchema),z.lazy(() => SubmissionUncheckedUpdateWithoutContestInputSchema) ]),
+  create: z.union([ z.lazy(() => SubmissionCreateWithoutContestInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutContestInputSchema) ]),
+}).strict() as z.ZodType<Prisma.SubmissionUpsertWithWhereUniqueWithoutContestInput>;
+
+export const SubmissionUpdateWithWhereUniqueWithoutContestInputSchema: z.ZodType<Prisma.SubmissionUpdateWithWhereUniqueWithoutContestInput> = z.object({
+  where: z.lazy(() => SubmissionWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => SubmissionUpdateWithoutContestInputSchema),z.lazy(() => SubmissionUncheckedUpdateWithoutContestInputSchema) ]),
+}).strict() as z.ZodType<Prisma.SubmissionUpdateWithWhereUniqueWithoutContestInput>;
+
+export const SubmissionUpdateManyWithWhereWithoutContestInputSchema: z.ZodType<Prisma.SubmissionUpdateManyWithWhereWithoutContestInput> = z.object({
+  where: z.lazy(() => SubmissionScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => SubmissionUpdateManyMutationInputSchema),z.lazy(() => SubmissionUncheckedUpdateManyWithoutContestInputSchema) ]),
+}).strict() as z.ZodType<Prisma.SubmissionUpdateManyWithWhereWithoutContestInput>;
+
 export const ChallengeCreateWithoutContestsInputSchema: z.ZodType<Prisma.ChallengeCreateWithoutContestsInput> = z.object({
   id: z.string(),
   title: z.string(),
@@ -3414,10 +3639,12 @@ export const ChallengeCreateWithoutContestsInputSchema: z.ZodType<Prisma.Challen
   description: z.string(),
   input_format: z.string(),
   output_format: z.string(),
+  constraints: z.string(),
   time_limit: z.number().int(),
   memory_limit: z.number().int(),
   tasks: z.lazy(() => TaskCreateNestedManyWithoutChallengeInputSchema).optional(),
-  tests: z.lazy(() => TestCreateNestedManyWithoutChallengeInputSchema).optional()
+  tests: z.lazy(() => TestCreateNestedManyWithoutChallengeInputSchema).optional(),
+  submissions: z.lazy(() => SubmissionCreateNestedManyWithoutChallengeInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeCreateWithoutContestsInput>;
 
 export const ChallengeUncheckedCreateWithoutContestsInputSchema: z.ZodType<Prisma.ChallengeUncheckedCreateWithoutContestsInput> = z.object({
@@ -3427,10 +3654,12 @@ export const ChallengeUncheckedCreateWithoutContestsInputSchema: z.ZodType<Prism
   description: z.string(),
   input_format: z.string(),
   output_format: z.string(),
+  constraints: z.string(),
   time_limit: z.number().int(),
   memory_limit: z.number().int(),
   tasks: z.lazy(() => TaskUncheckedCreateNestedManyWithoutChallengeInputSchema).optional(),
-  tests: z.lazy(() => TestUncheckedCreateNestedManyWithoutChallengeInputSchema).optional()
+  tests: z.lazy(() => TestUncheckedCreateNestedManyWithoutChallengeInputSchema).optional(),
+  submissions: z.lazy(() => SubmissionUncheckedCreateNestedManyWithoutChallengeInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeUncheckedCreateWithoutContestsInput>;
 
 export const ChallengeCreateOrConnectWithoutContestsInputSchema: z.ZodType<Prisma.ChallengeCreateOrConnectWithoutContestsInput> = z.object({
@@ -3444,7 +3673,8 @@ export const ContestCreateWithoutChallengesInputSchema: z.ZodType<Prisma.Contest
   start_time: z.coerce.date().optional().nullable(),
   end_time: z.coerce.date().optional().nullable(),
   description: z.string(),
-  participants: z.lazy(() => ParticipantCreateNestedManyWithoutContestInputSchema).optional()
+  participants: z.lazy(() => ParticipantCreateNestedManyWithoutContestInputSchema).optional(),
+  Submission: z.lazy(() => SubmissionCreateNestedManyWithoutContestInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestCreateWithoutChallengesInput>;
 
 export const ContestUncheckedCreateWithoutChallengesInputSchema: z.ZodType<Prisma.ContestUncheckedCreateWithoutChallengesInput> = z.object({
@@ -3453,36 +3683,14 @@ export const ContestUncheckedCreateWithoutChallengesInputSchema: z.ZodType<Prism
   start_time: z.coerce.date().optional().nullable(),
   end_time: z.coerce.date().optional().nullable(),
   description: z.string(),
-  participants: z.lazy(() => ParticipantUncheckedCreateNestedManyWithoutContestInputSchema).optional()
+  participants: z.lazy(() => ParticipantUncheckedCreateNestedManyWithoutContestInputSchema).optional(),
+  Submission: z.lazy(() => SubmissionUncheckedCreateNestedManyWithoutContestInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestUncheckedCreateWithoutChallengesInput>;
 
 export const ContestCreateOrConnectWithoutChallengesInputSchema: z.ZodType<Prisma.ContestCreateOrConnectWithoutChallengesInput> = z.object({
   where: z.lazy(() => ContestWhereUniqueInputSchema),
   create: z.union([ z.lazy(() => ContestCreateWithoutChallengesInputSchema),z.lazy(() => ContestUncheckedCreateWithoutChallengesInputSchema) ]),
 }).strict() as z.ZodType<Prisma.ContestCreateOrConnectWithoutChallengesInput>;
-
-export const SubmissionCreateWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionCreateWithoutChallengeInput> = z.object({
-  token: z.string(),
-  src: z.string(),
-  score: z.number().int().optional().nullable(),
-  time: z.coerce.date(),
-  owner: z.lazy(() => UserCreateNestedOneWithoutSubmissionsInputSchema),
-  results: z.lazy(() => ResultCreateNestedManyWithoutSubmissionInputSchema).optional()
-}).strict() as z.ZodType<Prisma.SubmissionCreateWithoutChallengeInput>;
-
-export const SubmissionUncheckedCreateWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionUncheckedCreateWithoutChallengeInput> = z.object({
-  token: z.string(),
-  owner_id: z.number().int(),
-  src: z.string(),
-  score: z.number().int().optional().nullable(),
-  time: z.coerce.date(),
-  results: z.lazy(() => ResultUncheckedCreateNestedManyWithoutSubmissionInputSchema).optional()
-}).strict() as z.ZodType<Prisma.SubmissionUncheckedCreateWithoutChallengeInput>;
-
-export const SubmissionCreateOrConnectWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionCreateOrConnectWithoutChallengeInput> = z.object({
-  where: z.lazy(() => SubmissionWhereUniqueInputSchema),
-  create: z.union([ z.lazy(() => SubmissionCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema) ]),
-}).strict() as z.ZodType<Prisma.SubmissionCreateOrConnectWithoutChallengeInput>;
 
 export const ChallengeUpsertWithoutContestsInputSchema: z.ZodType<Prisma.ChallengeUpsertWithoutContestsInput> = z.object({
   update: z.union([ z.lazy(() => ChallengeUpdateWithoutContestsInputSchema),z.lazy(() => ChallengeUncheckedUpdateWithoutContestsInputSchema) ]),
@@ -3502,10 +3710,12 @@ export const ChallengeUpdateWithoutContestsInputSchema: z.ZodType<Prisma.Challen
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   input_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   output_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   time_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   memory_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   tasks: z.lazy(() => TaskUpdateManyWithoutChallengeNestedInputSchema).optional(),
-  tests: z.lazy(() => TestUpdateManyWithoutChallengeNestedInputSchema).optional()
+  tests: z.lazy(() => TestUpdateManyWithoutChallengeNestedInputSchema).optional(),
+  submissions: z.lazy(() => SubmissionUpdateManyWithoutChallengeNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeUpdateWithoutContestsInput>;
 
 export const ChallengeUncheckedUpdateWithoutContestsInputSchema: z.ZodType<Prisma.ChallengeUncheckedUpdateWithoutContestsInput> = z.object({
@@ -3515,10 +3725,12 @@ export const ChallengeUncheckedUpdateWithoutContestsInputSchema: z.ZodType<Prism
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   input_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   output_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   time_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   memory_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   tasks: z.lazy(() => TaskUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional(),
-  tests: z.lazy(() => TestUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional()
+  tests: z.lazy(() => TestUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional(),
+  submissions: z.lazy(() => SubmissionUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeUncheckedUpdateWithoutContestsInput>;
 
 export const ContestUpsertWithoutChallengesInputSchema: z.ZodType<Prisma.ContestUpsertWithoutChallengesInput> = z.object({
@@ -3538,7 +3750,8 @@ export const ContestUpdateWithoutChallengesInputSchema: z.ZodType<Prisma.Contest
   start_time: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   end_time: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  participants: z.lazy(() => ParticipantUpdateManyWithoutContestNestedInputSchema).optional()
+  participants: z.lazy(() => ParticipantUpdateManyWithoutContestNestedInputSchema).optional(),
+  Submission: z.lazy(() => SubmissionUpdateManyWithoutContestNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestUpdateWithoutChallengesInput>;
 
 export const ContestUncheckedUpdateWithoutChallengesInputSchema: z.ZodType<Prisma.ContestUncheckedUpdateWithoutChallengesInput> = z.object({
@@ -3547,29 +3760,15 @@ export const ContestUncheckedUpdateWithoutChallengesInputSchema: z.ZodType<Prism
   start_time: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   end_time: z.union([ z.coerce.date(),z.lazy(() => NullableDateTimeFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  participants: z.lazy(() => ParticipantUncheckedUpdateManyWithoutContestNestedInputSchema).optional()
+  participants: z.lazy(() => ParticipantUncheckedUpdateManyWithoutContestNestedInputSchema).optional(),
+  Submission: z.lazy(() => SubmissionUncheckedUpdateManyWithoutContestNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestUncheckedUpdateWithoutChallengesInput>;
-
-export const SubmissionUpsertWithWhereUniqueWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionUpsertWithWhereUniqueWithoutChallengeInput> = z.object({
-  where: z.lazy(() => SubmissionWhereUniqueInputSchema),
-  update: z.union([ z.lazy(() => SubmissionUpdateWithoutChallengeInputSchema),z.lazy(() => SubmissionUncheckedUpdateWithoutChallengeInputSchema) ]),
-  create: z.union([ z.lazy(() => SubmissionCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema) ]),
-}).strict() as z.ZodType<Prisma.SubmissionUpsertWithWhereUniqueWithoutChallengeInput>;
-
-export const SubmissionUpdateWithWhereUniqueWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionUpdateWithWhereUniqueWithoutChallengeInput> = z.object({
-  where: z.lazy(() => SubmissionWhereUniqueInputSchema),
-  data: z.union([ z.lazy(() => SubmissionUpdateWithoutChallengeInputSchema),z.lazy(() => SubmissionUncheckedUpdateWithoutChallengeInputSchema) ]),
-}).strict() as z.ZodType<Prisma.SubmissionUpdateWithWhereUniqueWithoutChallengeInput>;
-
-export const SubmissionUpdateManyWithWhereWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionUpdateManyWithWhereWithoutChallengeInput> = z.object({
-  where: z.lazy(() => SubmissionScalarWhereInputSchema),
-  data: z.union([ z.lazy(() => SubmissionUpdateManyMutationInputSchema),z.lazy(() => SubmissionUncheckedUpdateManyWithoutChallengeInputSchema) ]),
-}).strict() as z.ZodType<Prisma.SubmissionUpdateManyWithWhereWithoutChallengeInput>;
 
 export const TaskCreateWithoutChallengeInputSchema: z.ZodType<Prisma.TaskCreateWithoutChallengeInput> = z.object({
   type: z.string(),
   task_number: z.number().int(),
   weight: z.number().int(),
+  constraints: z.string(),
   tests: z.lazy(() => TestCreateNestedManyWithoutTaskInputSchema).optional()
 }).strict() as z.ZodType<Prisma.TaskCreateWithoutChallengeInput>;
 
@@ -3577,6 +3776,7 @@ export const TaskUncheckedCreateWithoutChallengeInputSchema: z.ZodType<Prisma.Ta
   type: z.string(),
   task_number: z.number().int(),
   weight: z.number().int(),
+  constraints: z.string(),
   tests: z.lazy(() => TestUncheckedCreateNestedManyWithoutTaskInputSchema).optional()
 }).strict() as z.ZodType<Prisma.TaskUncheckedCreateWithoutChallengeInput>;
 
@@ -3587,14 +3787,12 @@ export const TaskCreateOrConnectWithoutChallengeInputSchema: z.ZodType<Prisma.Ta
 
 export const ContestChallengeCreateWithoutChallengeInputSchema: z.ZodType<Prisma.ContestChallengeCreateWithoutChallengeInput> = z.object({
   max_score: z.number().int(),
-  contest: z.lazy(() => ContestCreateNestedOneWithoutChallengesInputSchema),
-  submissions: z.lazy(() => SubmissionCreateNestedManyWithoutChallengeInputSchema).optional()
+  contest: z.lazy(() => ContestCreateNestedOneWithoutChallengesInputSchema)
 }).strict() as z.ZodType<Prisma.ContestChallengeCreateWithoutChallengeInput>;
 
 export const ContestChallengeUncheckedCreateWithoutChallengeInputSchema: z.ZodType<Prisma.ContestChallengeUncheckedCreateWithoutChallengeInput> = z.object({
   contest_id: z.string(),
-  max_score: z.number().int(),
-  submissions: z.lazy(() => SubmissionUncheckedCreateNestedManyWithoutChallengeInputSchema).optional()
+  max_score: z.number().int()
 }).strict() as z.ZodType<Prisma.ContestChallengeUncheckedCreateWithoutChallengeInput>;
 
 export const ContestChallengeCreateOrConnectWithoutChallengeInputSchema: z.ZodType<Prisma.ContestChallengeCreateOrConnectWithoutChallengeInput> = z.object({
@@ -3627,6 +3825,31 @@ export const TestCreateOrConnectWithoutChallengeInputSchema: z.ZodType<Prisma.Te
   create: z.union([ z.lazy(() => TestCreateWithoutChallengeInputSchema),z.lazy(() => TestUncheckedCreateWithoutChallengeInputSchema) ]),
 }).strict() as z.ZodType<Prisma.TestCreateOrConnectWithoutChallengeInput>;
 
+export const SubmissionCreateWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionCreateWithoutChallengeInput> = z.object({
+  token: z.string(),
+  src: z.string(),
+  score: z.number().optional().nullable(),
+  time: z.coerce.date(),
+  owner: z.lazy(() => UserCreateNestedOneWithoutSubmissionsInputSchema),
+  contest: z.lazy(() => ContestCreateNestedOneWithoutSubmissionInputSchema),
+  results: z.lazy(() => ResultCreateNestedManyWithoutSubmissionInputSchema).optional()
+}).strict() as z.ZodType<Prisma.SubmissionCreateWithoutChallengeInput>;
+
+export const SubmissionUncheckedCreateWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionUncheckedCreateWithoutChallengeInput> = z.object({
+  token: z.string(),
+  owner_id: z.number().int(),
+  src: z.string(),
+  contest_id: z.string(),
+  score: z.number().optional().nullable(),
+  time: z.coerce.date(),
+  results: z.lazy(() => ResultUncheckedCreateNestedManyWithoutSubmissionInputSchema).optional()
+}).strict() as z.ZodType<Prisma.SubmissionUncheckedCreateWithoutChallengeInput>;
+
+export const SubmissionCreateOrConnectWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionCreateOrConnectWithoutChallengeInput> = z.object({
+  where: z.lazy(() => SubmissionWhereUniqueInputSchema),
+  create: z.union([ z.lazy(() => SubmissionCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema) ]),
+}).strict() as z.ZodType<Prisma.SubmissionCreateOrConnectWithoutChallengeInput>;
+
 export const TaskUpsertWithWhereUniqueWithoutChallengeInputSchema: z.ZodType<Prisma.TaskUpsertWithWhereUniqueWithoutChallengeInput> = z.object({
   where: z.lazy(() => TaskWhereUniqueInputSchema),
   update: z.union([ z.lazy(() => TaskUpdateWithoutChallengeInputSchema),z.lazy(() => TaskUncheckedUpdateWithoutChallengeInputSchema) ]),
@@ -3651,6 +3874,7 @@ export const TaskScalarWhereInputSchema: z.ZodType<Prisma.TaskScalarWhereInput> 
   type: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
   task_number: z.union([ z.lazy(() => IntFilterSchema),z.number() ]).optional(),
   weight: z.union([ z.lazy(() => IntFilterSchema),z.number() ]).optional(),
+  constraints: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
 }).strict() as z.ZodType<Prisma.TaskScalarWhereInput>;
 
 export const ContestChallengeUpsertWithWhereUniqueWithoutChallengeInputSchema: z.ZodType<Prisma.ContestChallengeUpsertWithWhereUniqueWithoutChallengeInput> = z.object({
@@ -3699,6 +3923,22 @@ export const TestScalarWhereInputSchema: z.ZodType<Prisma.TestScalarWhereInput> 
   output: z.union([ z.lazy(() => StringFilterSchema),z.string() ]).optional(),
 }).strict() as z.ZodType<Prisma.TestScalarWhereInput>;
 
+export const SubmissionUpsertWithWhereUniqueWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionUpsertWithWhereUniqueWithoutChallengeInput> = z.object({
+  where: z.lazy(() => SubmissionWhereUniqueInputSchema),
+  update: z.union([ z.lazy(() => SubmissionUpdateWithoutChallengeInputSchema),z.lazy(() => SubmissionUncheckedUpdateWithoutChallengeInputSchema) ]),
+  create: z.union([ z.lazy(() => SubmissionCreateWithoutChallengeInputSchema),z.lazy(() => SubmissionUncheckedCreateWithoutChallengeInputSchema) ]),
+}).strict() as z.ZodType<Prisma.SubmissionUpsertWithWhereUniqueWithoutChallengeInput>;
+
+export const SubmissionUpdateWithWhereUniqueWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionUpdateWithWhereUniqueWithoutChallengeInput> = z.object({
+  where: z.lazy(() => SubmissionWhereUniqueInputSchema),
+  data: z.union([ z.lazy(() => SubmissionUpdateWithoutChallengeInputSchema),z.lazy(() => SubmissionUncheckedUpdateWithoutChallengeInputSchema) ]),
+}).strict() as z.ZodType<Prisma.SubmissionUpdateWithWhereUniqueWithoutChallengeInput>;
+
+export const SubmissionUpdateManyWithWhereWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionUpdateManyWithWhereWithoutChallengeInput> = z.object({
+  where: z.lazy(() => SubmissionScalarWhereInputSchema),
+  data: z.union([ z.lazy(() => SubmissionUpdateManyMutationInputSchema),z.lazy(() => SubmissionUncheckedUpdateManyWithoutChallengeInputSchema) ]),
+}).strict() as z.ZodType<Prisma.SubmissionUpdateManyWithWhereWithoutChallengeInput>;
+
 export const ChallengeCreateWithoutTasksInputSchema: z.ZodType<Prisma.ChallengeCreateWithoutTasksInput> = z.object({
   id: z.string(),
   title: z.string(),
@@ -3706,10 +3946,12 @@ export const ChallengeCreateWithoutTasksInputSchema: z.ZodType<Prisma.ChallengeC
   description: z.string(),
   input_format: z.string(),
   output_format: z.string(),
+  constraints: z.string(),
   time_limit: z.number().int(),
   memory_limit: z.number().int(),
   contests: z.lazy(() => ContestChallengeCreateNestedManyWithoutChallengeInputSchema).optional(),
-  tests: z.lazy(() => TestCreateNestedManyWithoutChallengeInputSchema).optional()
+  tests: z.lazy(() => TestCreateNestedManyWithoutChallengeInputSchema).optional(),
+  submissions: z.lazy(() => SubmissionCreateNestedManyWithoutChallengeInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeCreateWithoutTasksInput>;
 
 export const ChallengeUncheckedCreateWithoutTasksInputSchema: z.ZodType<Prisma.ChallengeUncheckedCreateWithoutTasksInput> = z.object({
@@ -3719,10 +3961,12 @@ export const ChallengeUncheckedCreateWithoutTasksInputSchema: z.ZodType<Prisma.C
   description: z.string(),
   input_format: z.string(),
   output_format: z.string(),
+  constraints: z.string(),
   time_limit: z.number().int(),
   memory_limit: z.number().int(),
   contests: z.lazy(() => ContestChallengeUncheckedCreateNestedManyWithoutChallengeInputSchema).optional(),
-  tests: z.lazy(() => TestUncheckedCreateNestedManyWithoutChallengeInputSchema).optional()
+  tests: z.lazy(() => TestUncheckedCreateNestedManyWithoutChallengeInputSchema).optional(),
+  submissions: z.lazy(() => SubmissionUncheckedCreateNestedManyWithoutChallengeInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeUncheckedCreateWithoutTasksInput>;
 
 export const ChallengeCreateOrConnectWithoutTasksInputSchema: z.ZodType<Prisma.ChallengeCreateOrConnectWithoutTasksInput> = z.object({
@@ -3772,10 +4016,12 @@ export const ChallengeUpdateWithoutTasksInputSchema: z.ZodType<Prisma.ChallengeU
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   input_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   output_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   time_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   memory_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   contests: z.lazy(() => ContestChallengeUpdateManyWithoutChallengeNestedInputSchema).optional(),
-  tests: z.lazy(() => TestUpdateManyWithoutChallengeNestedInputSchema).optional()
+  tests: z.lazy(() => TestUpdateManyWithoutChallengeNestedInputSchema).optional(),
+  submissions: z.lazy(() => SubmissionUpdateManyWithoutChallengeNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeUpdateWithoutTasksInput>;
 
 export const ChallengeUncheckedUpdateWithoutTasksInputSchema: z.ZodType<Prisma.ChallengeUncheckedUpdateWithoutTasksInput> = z.object({
@@ -3785,10 +4031,12 @@ export const ChallengeUncheckedUpdateWithoutTasksInputSchema: z.ZodType<Prisma.C
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   input_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   output_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   time_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   memory_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   contests: z.lazy(() => ContestChallengeUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional(),
-  tests: z.lazy(() => TestUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional()
+  tests: z.lazy(() => TestUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional(),
+  submissions: z.lazy(() => SubmissionUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeUncheckedUpdateWithoutTasksInput>;
 
 export const TestUpsertWithWhereUniqueWithoutTaskInputSchema: z.ZodType<Prisma.TestUpsertWithWhereUniqueWithoutTaskInput> = z.object({
@@ -3811,6 +4059,7 @@ export const TaskCreateWithoutTestsInputSchema: z.ZodType<Prisma.TaskCreateWitho
   type: z.string(),
   task_number: z.number().int(),
   weight: z.number().int(),
+  constraints: z.string(),
   challenge: z.lazy(() => ChallengeCreateNestedOneWithoutTasksInputSchema)
 }).strict() as z.ZodType<Prisma.TaskCreateWithoutTestsInput>;
 
@@ -3818,7 +4067,8 @@ export const TaskUncheckedCreateWithoutTestsInputSchema: z.ZodType<Prisma.TaskUn
   challenge_id: z.string(),
   type: z.string(),
   task_number: z.number().int(),
-  weight: z.number().int()
+  weight: z.number().int(),
+  constraints: z.string()
 }).strict() as z.ZodType<Prisma.TaskUncheckedCreateWithoutTestsInput>;
 
 export const TaskCreateOrConnectWithoutTestsInputSchema: z.ZodType<Prisma.TaskCreateOrConnectWithoutTestsInput> = z.object({
@@ -3833,10 +4083,12 @@ export const ChallengeCreateWithoutTestsInputSchema: z.ZodType<Prisma.ChallengeC
   description: z.string(),
   input_format: z.string(),
   output_format: z.string(),
+  constraints: z.string(),
   time_limit: z.number().int(),
   memory_limit: z.number().int(),
   tasks: z.lazy(() => TaskCreateNestedManyWithoutChallengeInputSchema).optional(),
-  contests: z.lazy(() => ContestChallengeCreateNestedManyWithoutChallengeInputSchema).optional()
+  contests: z.lazy(() => ContestChallengeCreateNestedManyWithoutChallengeInputSchema).optional(),
+  submissions: z.lazy(() => SubmissionCreateNestedManyWithoutChallengeInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeCreateWithoutTestsInput>;
 
 export const ChallengeUncheckedCreateWithoutTestsInputSchema: z.ZodType<Prisma.ChallengeUncheckedCreateWithoutTestsInput> = z.object({
@@ -3846,10 +4098,12 @@ export const ChallengeUncheckedCreateWithoutTestsInputSchema: z.ZodType<Prisma.C
   description: z.string(),
   input_format: z.string(),
   output_format: z.string(),
+  constraints: z.string(),
   time_limit: z.number().int(),
   memory_limit: z.number().int(),
   tasks: z.lazy(() => TaskUncheckedCreateNestedManyWithoutChallengeInputSchema).optional(),
-  contests: z.lazy(() => ContestChallengeUncheckedCreateNestedManyWithoutChallengeInputSchema).optional()
+  contests: z.lazy(() => ContestChallengeUncheckedCreateNestedManyWithoutChallengeInputSchema).optional(),
+  submissions: z.lazy(() => SubmissionUncheckedCreateNestedManyWithoutChallengeInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeUncheckedCreateWithoutTestsInput>;
 
 export const ChallengeCreateOrConnectWithoutTestsInputSchema: z.ZodType<Prisma.ChallengeCreateOrConnectWithoutTestsInput> = z.object({
@@ -3872,6 +4126,7 @@ export const TaskUpdateWithoutTestsInputSchema: z.ZodType<Prisma.TaskUpdateWitho
   type: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   task_number: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   weight: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   challenge: z.lazy(() => ChallengeUpdateOneRequiredWithoutTasksNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.TaskUpdateWithoutTestsInput>;
 
@@ -3880,6 +4135,7 @@ export const TaskUncheckedUpdateWithoutTestsInputSchema: z.ZodType<Prisma.TaskUn
   type: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   task_number: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   weight: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict() as z.ZodType<Prisma.TaskUncheckedUpdateWithoutTestsInput>;
 
 export const ChallengeUpsertWithoutTestsInputSchema: z.ZodType<Prisma.ChallengeUpsertWithoutTestsInput> = z.object({
@@ -3900,10 +4156,12 @@ export const ChallengeUpdateWithoutTestsInputSchema: z.ZodType<Prisma.ChallengeU
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   input_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   output_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   time_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   memory_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   tasks: z.lazy(() => TaskUpdateManyWithoutChallengeNestedInputSchema).optional(),
-  contests: z.lazy(() => ContestChallengeUpdateManyWithoutChallengeNestedInputSchema).optional()
+  contests: z.lazy(() => ContestChallengeUpdateManyWithoutChallengeNestedInputSchema).optional(),
+  submissions: z.lazy(() => SubmissionUpdateManyWithoutChallengeNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeUpdateWithoutTestsInput>;
 
 export const ChallengeUncheckedUpdateWithoutTestsInputSchema: z.ZodType<Prisma.ChallengeUncheckedUpdateWithoutTestsInput> = z.object({
@@ -3913,18 +4171,21 @@ export const ChallengeUncheckedUpdateWithoutTestsInputSchema: z.ZodType<Prisma.C
   description: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   input_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   output_format: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   time_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   memory_limit: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   tasks: z.lazy(() => TaskUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional(),
-  contests: z.lazy(() => ContestChallengeUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional()
+  contests: z.lazy(() => ContestChallengeUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional(),
+  submissions: z.lazy(() => SubmissionUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ChallengeUncheckedUpdateWithoutTestsInput>;
 
 export const SubmissionUpdateWithoutOwnerInputSchema: z.ZodType<Prisma.SubmissionUpdateWithoutOwnerInput> = z.object({
   token: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   src: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  score: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  score: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   time: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-  challenge: z.lazy(() => ContestChallengeUpdateOneRequiredWithoutSubmissionsNestedInputSchema).optional(),
+  challenge: z.lazy(() => ChallengeUpdateOneRequiredWithoutSubmissionsNestedInputSchema).optional(),
+  contest: z.lazy(() => ContestUpdateOneRequiredWithoutSubmissionNestedInputSchema).optional(),
   results: z.lazy(() => ResultUpdateManyWithoutSubmissionNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.SubmissionUpdateWithoutOwnerInput>;
 
@@ -3933,7 +4194,7 @@ export const SubmissionUncheckedUpdateWithoutOwnerInputSchema: z.ZodType<Prisma.
   src: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   contest_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   challenge_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  score: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  score: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   time: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   results: z.lazy(() => ResultUncheckedUpdateManyWithoutSubmissionNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.SubmissionUncheckedUpdateWithoutOwnerInput>;
@@ -3943,7 +4204,7 @@ export const SubmissionUncheckedUpdateManyWithoutOwnerInputSchema: z.ZodType<Pri
   src: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   contest_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   challenge_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  score: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  score: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   time: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict() as z.ZodType<Prisma.SubmissionUncheckedUpdateManyWithoutOwnerInput>;
 
@@ -3997,14 +4258,12 @@ export const ResultUncheckedUpdateManyWithoutSubmissionInputSchema: z.ZodType<Pr
 
 export const ContestChallengeUpdateWithoutContestInputSchema: z.ZodType<Prisma.ContestChallengeUpdateWithoutContestInput> = z.object({
   max_score: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  challenge: z.lazy(() => ChallengeUpdateOneRequiredWithoutContestsNestedInputSchema).optional(),
-  submissions: z.lazy(() => SubmissionUpdateManyWithoutChallengeNestedInputSchema).optional()
+  challenge: z.lazy(() => ChallengeUpdateOneRequiredWithoutContestsNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestChallengeUpdateWithoutContestInput>;
 
 export const ContestChallengeUncheckedUpdateWithoutContestInputSchema: z.ZodType<Prisma.ContestChallengeUncheckedUpdateWithoutContestInput> = z.object({
   challenge_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   max_score: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  submissions: z.lazy(() => SubmissionUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestChallengeUncheckedUpdateWithoutContestInput>;
 
 export const ContestChallengeUncheckedUpdateManyWithoutContestInputSchema: z.ZodType<Prisma.ContestChallengeUncheckedUpdateManyWithoutContestInput> = z.object({
@@ -4027,36 +4286,40 @@ export const ParticipantUncheckedUpdateManyWithoutContestInputSchema: z.ZodType<
   time: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict() as z.ZodType<Prisma.ParticipantUncheckedUpdateManyWithoutContestInput>;
 
-export const SubmissionUpdateWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionUpdateWithoutChallengeInput> = z.object({
+export const SubmissionUpdateWithoutContestInputSchema: z.ZodType<Prisma.SubmissionUpdateWithoutContestInput> = z.object({
   token: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   src: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  score: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  score: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   time: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   owner: z.lazy(() => UserUpdateOneRequiredWithoutSubmissionsNestedInputSchema).optional(),
+  challenge: z.lazy(() => ChallengeUpdateOneRequiredWithoutSubmissionsNestedInputSchema).optional(),
   results: z.lazy(() => ResultUpdateManyWithoutSubmissionNestedInputSchema).optional()
-}).strict() as z.ZodType<Prisma.SubmissionUpdateWithoutChallengeInput>;
+}).strict() as z.ZodType<Prisma.SubmissionUpdateWithoutContestInput>;
 
-export const SubmissionUncheckedUpdateWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionUncheckedUpdateWithoutChallengeInput> = z.object({
+export const SubmissionUncheckedUpdateWithoutContestInputSchema: z.ZodType<Prisma.SubmissionUncheckedUpdateWithoutContestInput> = z.object({
   token: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   owner_id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   src: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  score: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  challenge_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  score: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   time: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
   results: z.lazy(() => ResultUncheckedUpdateManyWithoutSubmissionNestedInputSchema).optional()
-}).strict() as z.ZodType<Prisma.SubmissionUncheckedUpdateWithoutChallengeInput>;
+}).strict() as z.ZodType<Prisma.SubmissionUncheckedUpdateWithoutContestInput>;
 
-export const SubmissionUncheckedUpdateManyWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionUncheckedUpdateManyWithoutChallengeInput> = z.object({
+export const SubmissionUncheckedUpdateManyWithoutContestInputSchema: z.ZodType<Prisma.SubmissionUncheckedUpdateManyWithoutContestInput> = z.object({
   token: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   owner_id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   src: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
-  score: z.union([ z.number().int(),z.lazy(() => NullableIntFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  challenge_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  score: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
   time: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
-}).strict() as z.ZodType<Prisma.SubmissionUncheckedUpdateManyWithoutChallengeInput>;
+}).strict() as z.ZodType<Prisma.SubmissionUncheckedUpdateManyWithoutContestInput>;
 
 export const TaskUpdateWithoutChallengeInputSchema: z.ZodType<Prisma.TaskUpdateWithoutChallengeInput> = z.object({
   type: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   task_number: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   weight: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   tests: z.lazy(() => TestUpdateManyWithoutTaskNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.TaskUpdateWithoutChallengeInput>;
 
@@ -4064,6 +4327,7 @@ export const TaskUncheckedUpdateWithoutChallengeInputSchema: z.ZodType<Prisma.Ta
   type: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   task_number: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   weight: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   tests: z.lazy(() => TestUncheckedUpdateManyWithoutTaskNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.TaskUncheckedUpdateWithoutChallengeInput>;
 
@@ -4071,18 +4335,17 @@ export const TaskUncheckedUpdateManyWithoutChallengeInputSchema: z.ZodType<Prism
   type: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   task_number: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
   weight: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  constraints: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict() as z.ZodType<Prisma.TaskUncheckedUpdateManyWithoutChallengeInput>;
 
 export const ContestChallengeUpdateWithoutChallengeInputSchema: z.ZodType<Prisma.ContestChallengeUpdateWithoutChallengeInput> = z.object({
   max_score: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  contest: z.lazy(() => ContestUpdateOneRequiredWithoutChallengesNestedInputSchema).optional(),
-  submissions: z.lazy(() => SubmissionUpdateManyWithoutChallengeNestedInputSchema).optional()
+  contest: z.lazy(() => ContestUpdateOneRequiredWithoutChallengesNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestChallengeUpdateWithoutChallengeInput>;
 
 export const ContestChallengeUncheckedUpdateWithoutChallengeInputSchema: z.ZodType<Prisma.ContestChallengeUncheckedUpdateWithoutChallengeInput> = z.object({
   contest_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   max_score: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
-  submissions: z.lazy(() => SubmissionUncheckedUpdateManyWithoutChallengeNestedInputSchema).optional()
 }).strict() as z.ZodType<Prisma.ContestChallengeUncheckedUpdateWithoutChallengeInput>;
 
 export const ContestChallengeUncheckedUpdateManyWithoutChallengeInputSchema: z.ZodType<Prisma.ContestChallengeUncheckedUpdateManyWithoutChallengeInput> = z.object({
@@ -4119,6 +4382,35 @@ export const TestUncheckedUpdateManyWithoutChallengeInputSchema: z.ZodType<Prism
   input: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
   output: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
 }).strict() as z.ZodType<Prisma.TestUncheckedUpdateManyWithoutChallengeInput>;
+
+export const SubmissionUpdateWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionUpdateWithoutChallengeInput> = z.object({
+  token: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  src: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  score: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  time: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  owner: z.lazy(() => UserUpdateOneRequiredWithoutSubmissionsNestedInputSchema).optional(),
+  contest: z.lazy(() => ContestUpdateOneRequiredWithoutSubmissionNestedInputSchema).optional(),
+  results: z.lazy(() => ResultUpdateManyWithoutSubmissionNestedInputSchema).optional()
+}).strict() as z.ZodType<Prisma.SubmissionUpdateWithoutChallengeInput>;
+
+export const SubmissionUncheckedUpdateWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionUncheckedUpdateWithoutChallengeInput> = z.object({
+  token: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  owner_id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  src: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contest_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  score: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  time: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+  results: z.lazy(() => ResultUncheckedUpdateManyWithoutSubmissionNestedInputSchema).optional()
+}).strict() as z.ZodType<Prisma.SubmissionUncheckedUpdateWithoutChallengeInput>;
+
+export const SubmissionUncheckedUpdateManyWithoutChallengeInputSchema: z.ZodType<Prisma.SubmissionUncheckedUpdateManyWithoutChallengeInput> = z.object({
+  token: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  owner_id: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),
+  src: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  contest_id: z.union([ z.string(),z.lazy(() => StringFieldUpdateOperationsInputSchema) ]).optional(),
+  score: z.union([ z.number(),z.lazy(() => NullableFloatFieldUpdateOperationsInputSchema) ]).optional().nullable(),
+  time: z.union([ z.coerce.date(),z.lazy(() => DateTimeFieldUpdateOperationsInputSchema) ]).optional(),
+}).strict() as z.ZodType<Prisma.SubmissionUncheckedUpdateManyWithoutChallengeInput>;
 
 export const TestUpdateWithoutTaskInputSchema: z.ZodType<Prisma.TestUpdateWithoutTaskInput> = z.object({
   test_number: z.union([ z.number().int(),z.lazy(() => IntFieldUpdateOperationsInputSchema) ]).optional(),

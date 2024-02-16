@@ -27,14 +27,15 @@ model User {
 }
 
 model Submission {
-  token        String           @id
-  owner        User             @relation(fields: [owner_id], references: [id])
-  challenge    ContestChallenge @relation(fields: [challenge_id, contest_id], references: [challenge_id, contest_id])
+  token        String    @id
+  owner        User      @relation(fields: [owner_id], references: [id])
+  challenge    Challenge @relation(fields: [challenge_id], references: [id])
+  contest      Contest   @relation(fields: [contest_id], references: [id])
   owner_id     Int
   src          String
   contest_id   String
   challenge_id String
-  score        Int?
+  score        Float?
   time         DateTime
   results      Result[]
 }
@@ -72,15 +73,15 @@ model Contest {
   challenges   ContestChallenge[]
   participants Participant[]
   description  String
+  Submission   Submission[]
 }
 
 model ContestChallenge {
-  challenge    Challenge    @relation(fields: [challenge_id], references: [id])
+  challenge    Challenge @relation(fields: [challenge_id], references: [id])
   challenge_id String
-  contest      Contest      @relation(fields: [contest_id], references: [id])
+  contest      Contest   @relation(fields: [contest_id], references: [id])
   contest_id   String
   max_score    Int
-  submissions  Submission[]
 
   @@id([challenge_id, contest_id])
 }
@@ -94,9 +95,11 @@ model Challenge {
   description   String
   input_format  String
   output_format String
+  constraints   String
   time_limit    Int
   memory_limit  Int
   tests         Test[]
+  submissions   Submission[]
 }
 
 model Task {
@@ -105,6 +108,7 @@ model Task {
   type         String
   task_number  Int
   weight       Int
+  constraints  String
   tests        Test[]
 
   @@id([challenge_id, task_number])
