@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { FaUpload } from "react-icons/fa6";
 import { IconButton } from "~components/IconButton";
 import { EditData, TestData } from "~pages/administration/AdminChallenge";
-import { uploadFile, uploadFileText } from "~utils/upload";
+import { uploadFileText } from "~utils/upload/upload";
 
 export const EditTestModal = (props: {
   data: EditData;

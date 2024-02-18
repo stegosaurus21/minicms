@@ -1,46 +1,64 @@
 import JSZip from "jszip";
-import { TaskData } from "../pages/administration/AdminChallenge";
+import {
+  ChallengeData,
+  TaskData,
+} from "../pages/administration/AdminChallenge";
 
-export async function exportTask(task: TaskData) {
-  const result = new JSZip();
-  result.file(
+export async function exportTask(task: TaskData, root: JSZip = new JSZip()) {
+  const { tests, ...config } = task;
+  root.file(
     "config.json",
     JSON.stringify({
-      weight: task.weight,
-      type: task.type,
-      examples: task.tests
+      examples: tests
         .filter((x) => x.is_example)
         .map((x) => ({
           name: `test_${x.test_number.toString().padStart(2, "0")}.txt`,
           explanation: x.explanation,
         })),
-      constraints: task.constraints,
+      ...config,
     })
   );
-  result.folder("input");
-  result.folder("output");
+  root.folder("input");
+  root.folder("output");
   task.tests.forEach((test, i) => {
-    result
+    root
       .folder("input")
       ?.file(
         `test_${test.test_number.toString().padStart(2, "0")}.txt`,
         test.input
       );
-    result
+    root
       .folder("output")
       ?.file(
         `test_${test.test_number.toString().padStart(2, "0")}.txt`,
         test.output
       );
   });
-  downloadZip(await result.generateAsync({ type: "base64" }), "task.zip");
+  return root;
 }
 
-export function downloadZip(data: string, name: string) {
+export async function exportChallenge(challenge: ChallengeData) {
+  const result = new JSZip();
+  const { tasks, ...config } = challenge;
+  result.file("config.json", JSON.stringify(config));
+  tasks.forEach((task, i) => {
+    exportTask(
+      task,
+      result.folder(
+        `task_${task.task_number.toString().padStart(2, "0")}`
+      ) as JSZip
+    );
+  });
+  return result;
+}
+
+export async function downloadZip(zip: JSZip, name: string) {
   const a = document.createElement("a");
   a.style.display = "none";
   a.download = name;
-  a.href = `data:application/zip;base64,${data}`;
+  a.href = `data:application/zip;base64,${await zip.generateAsync({
+    type: "base64",
+  })}`;
   document.body.appendChild(a);
   a.click();
   a.remove();

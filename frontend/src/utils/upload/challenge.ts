@@ -1,26 +1,55 @@
-import { ZipDefinition } from "./parser";
 import z from "zod";
-import { TaskStructure } from "./task";
+import { toShape } from "./types";
+import { taskDefinition, validateTask } from "./task";
 
-export const ChallengeStructure: ZipDefinition = [
-  {
-    type: "json",
+export const challengeDefinition = {
+  config: {
+    type: "json" as const,
     find: "config.json",
     shape: z.object({
       id: z.string(),
-      time_limit: z.optional(z.number()),
-      memory_limit: z.optional(z.number()),
-      title: z.optional(z.string()),
-      description: z.optional(z.string()),
-      input_format: z.optional(z.string()),
-      output_format: z.optional(z.string()),
-      constraints: z.optional(z.string()),
+      time_limit: z.number(),
+      memory_limit: z.number(),
+      title: z.string(),
+      description: z.string(),
+      input_format: z.string(),
+      output_format: z.string(),
+      constraints: z.string(),
     }),
+    default: {
+      time_limit: 1,
+      memory_limit: 1024 * 128,
+      description: "",
+      input_format: "",
+      output_format: "",
+      constraints: "",
+    },
   },
-  {
-    type: "directory",
-    find: "tasks",
+
+  tasks: {
+    type: "folderList" as const,
+    find: /task_[0-9]+/,
+    content: taskDefinition,
     optional: true,
-    content: [{ type: "directory", find: ".*", content: TaskStructure }],
   },
-];
+};
+
+const shape = toShape(challengeDefinition);
+export type UploadChallengeType = z.infer<typeof shape>;
+
+export async function validateChallenge(parsedZip: UploadChallengeType) {
+  console.log(parsedZip);
+  return {
+    ...parsedZip.config,
+    tasks: await Promise.all(
+      parsedZip.tasks.map(async ({ data }, i) => {
+        const { config, tests } = await validateTask(data);
+        return {
+          task_number: i,
+          tests: tests,
+          ...config,
+        };
+      })
+    ),
+  };
+}

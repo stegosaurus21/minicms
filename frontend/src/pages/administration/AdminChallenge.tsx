@@ -25,15 +25,16 @@ import { useState } from "react";
 import { EditTestModal } from "~components/Administration/EditTestModal";
 import { IconButton } from "~components/IconButton";
 import { FaCheck, FaPencil, FaPlus, FaTrash, FaXmark } from "react-icons/fa6";
-import {
-  TaskStructure,
-  UploadError,
-  parseZip,
-  uploadFile,
-  validateTask,
-} from "~utils/upload";
 import JSZip from "jszip";
-import { exportTask } from "~utils/export";
+import { downloadZip, exportChallenge, exportTask } from "~utils/export";
+import { uploadFile } from "~utils/upload/upload";
+import { parseZip } from "~utils/upload/parser";
+import { taskDefinition, validateTask } from "~utils/upload/task";
+import { UploadError } from "~utils/upload/errors";
+import {
+  challengeDefinition,
+  validateChallenge,
+} from "~utils/upload/challenge";
 
 export type ChallengeData =
   inferRouterOutputs<AppRouter>["challenge"]["getAdmin"];
@@ -67,12 +68,13 @@ export const AdminChallenge = () => {
 
   const mutateChallenge = trpc.admin.updateChallenge.useMutation();
 
-  const { control, register, setValue, handleSubmit } = useForm<ChallengeData>({
-    values: queryChallenge.data,
-    resetOptions: {
-      keepDirtyValues: true,
-    },
-  });
+  const { control, register, setValue, handleSubmit, reset } =
+    useForm<ChallengeData>({
+      values: queryChallenge.data,
+      resetOptions: {
+        keepDirtyValues: true,
+      },
+    });
   // Hacky, but necessary for my sanity right now
   const values = useWatch({ control: control }) as ChallengeData;
   console.log(values);
@@ -174,7 +176,7 @@ export const AdminChallenge = () => {
     try {
       const zipOutput = await parseZip(
         await JSZip.loadAsync(zip),
-        TaskStructure
+        taskDefinition
       );
       return await validateTask(zipOutput);
     } catch (e) {
@@ -186,8 +188,32 @@ export const AdminChallenge = () => {
     }
   }
 
-  function downloadTask(task: TaskData) {
-    exportTask(task);
+  async function downloadTask(task: TaskData) {
+    await downloadZip(await exportTask(task), "task.zip");
+  }
+
+  function removeChallenge() {}
+
+  async function uploadChallenge() {
+    const zip = await uploadFile();
+    if (!zip) return;
+    try {
+      const zipOutput = await parseZip(
+        await JSZip.loadAsync(zip),
+        challengeDefinition
+      );
+      return await validateChallenge(zipOutput);
+    } catch (e) {
+      if (e instanceof UploadError) {
+        refreshToast("error", e.message, "challenge_upload_err");
+        return;
+      }
+      throw e;
+    }
+  }
+
+  async function downloadChallenge(challenge: ChallengeData) {
+    await downloadZip(await exportChallenge(challenge), `${challenge.id}.zip`);
   }
 
   function removeTest(task: TaskData, test: TestData) {
@@ -238,6 +264,21 @@ export const AdminChallenge = () => {
         </span>
         <h1>Edit challenge</h1>
         <Form onSubmit={handleSubmit(submitForm)}>
+          <ButtonGroup>
+            <Button
+              className="mt-4"
+              onClick={async () => {
+                const data = await uploadChallenge();
+                if (data === undefined) return;
+                reset(data);
+              }}
+            >
+              Upload challenge
+            </Button>
+            <Button className="mt-4" onClick={() => downloadChallenge(values)}>
+              Download challenge
+            </Button>
+          </ButtonGroup>
           <h2>Details</h2>
           <Form.Label>Challenge ID</Form.Label>
           <Form.Control required type="text" {...register("id")} />
@@ -322,17 +363,8 @@ export const AdminChallenge = () => {
                           const { config, tests } = data;
                           setValue(`tasks.${i}`, {
                             task_number: task.task_number,
-                            tests: tests.map((x, i) => ({
-                              input: x.input,
-                              test_number: i,
-                              output: x.output,
-                              is_example: false,
-                              explanation: "",
-                              comment: x.name,
-                            })),
-                            weight: config.weight,
-                            type: config.type,
-                            constraints: config.constraints,
+                            tests: tests,
+                            ...config,
                           });
                         }}
                       >
@@ -420,6 +452,14 @@ export const AdminChallenge = () => {
               </Accordion.Item>
             ))}
           </Accordion>
+          <br />
+          <Button
+            className="mt-4"
+            variant="danger"
+            onClick={() => removeChallenge}
+          >
+            Delete task
+          </Button>
           <br />
           <Button type="submit">Save</Button>
         </Form>

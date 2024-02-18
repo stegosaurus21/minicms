@@ -1,7 +1,7 @@
 export abstract class UploadError extends Error {
   constructor(path: string, leaf: string, message: string) {
     super();
-    this.message = `${path}/${leaf}: ${message}`;
+    this.message = `Upload error at ${path}/${leaf}: ${message}`;
   }
 }
 export class UploadFileNotFoundError extends UploadError {
