@@ -1,5 +1,5 @@
 import createError from "http-errors";
-import { AuthValidation, Session } from "./interface";
+import { AuthValidation } from "./interface";
 import { v4 } from "uuid";
 import { prisma } from "./server";
 import { Request } from "express";
@@ -8,8 +8,6 @@ import { publicProcedure, router } from "./trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { hash } from "./helper";
-
-export const tokens: Map<string, Session> = new Map<string, Session>();
 
 export async function isAdmin(uId: number) {
   return (
@@ -90,11 +88,17 @@ export const authRouter = router({
 
         if (result.password === hash(input.password)) {
           const newToken = v4();
-          const newSession: Session = {
-            uId: result.id,
-            timeout: Date.now() + 1000 * 60 * 60 * 12,
-          };
-          tokens.set(newToken, newSession);
+          await prisma.token.create({
+            data: {
+              token: newToken,
+              expiry: new Date(Date.now() + 1000 * 60 * 60 * 6),
+              owner: {
+                connect: {
+                  id: result.id,
+                },
+              },
+            },
+          });
 
           return {
             token: newToken,
@@ -124,16 +128,17 @@ export const authRouter = router({
       }
     }),
 
-  logout: publicProcedure.mutation(({ ctx }) => {
-    return tokens.delete(ctx.token || "");
+  logout: publicProcedure.mutation(async ({ ctx }) => {
+    if (!ctx.token) return;
+    await prisma.token.delete({ where: { token: ctx.token } });
   }),
 
   validate: publicProcedure.query(async ({ ctx }): Promise<AuthValidation> => {
     const token = ctx.token;
     if (!token) return { isLoggedIn: false, username: null };
 
-    const session = tokens.get(token);
-    if (session === undefined || session.timeout < Date.now()) {
+    const session = await prisma.token.findUnique({ where: { token: token } });
+    if (session === null || session.expiry < new Date()) {
       return { isLoggedIn: false, username: null };
     }
 
@@ -173,12 +178,10 @@ export const authRouter = router({
 
 export async function getUser(req: Request): Promise<number> {
   const token = req.header("token");
-  const session = tokens.get(token || "");
-  if (
-    token === undefined ||
-    session === undefined ||
-    session.timeout < Date.now()
-  ) {
+  const session = await prisma.token.findUnique({
+    where: { token: token || "" },
+  });
+  if (token === undefined || session === null || session.expiry < new Date()) {
     throw createError(403, "Invalid or expired token.");
   }
 

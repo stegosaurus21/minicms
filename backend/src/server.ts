@@ -74,23 +74,24 @@ app.get("*", (req, res) => {
 });
 
 const server = app.listen(parseInt(BACKEND_PORT), BACKEND_URL, async () => {
-  const languagesReq = await fetch(
-    `http://${JUDGE_URL}:${JUDGE_PORT}/languages`,
-    {
-      method: "GET",
-    }
-  ).catch(() => {
-    console.log(
-      `error: could not reach judging server at http://${JUDGE_URL}:${JUDGE_PORT}`
-    );
-    process.exit(1);
-  });
-  judgeLanguages = ((await languagesReq.json()) as JudgeLanguage[]).filter(
-    (x) => !config.disabled_languages.includes(x.id)
-  );
-  console.log(
-    `server started on port ${parseInt(BACKEND_PORT)} at ${BACKEND_URL}`
-  );
+  fetch(`http://${JUDGE_URL}:${JUDGE_PORT}/languages`, {
+    method: "GET",
+  })
+    .then(async (res) => {
+      judgeLanguages = ((await res.json()) as JudgeLanguage[]).filter(
+        (x) => !config.disabled_languages.includes(x.id)
+      );
+    })
+    .catch(() => {
+      console.log(
+        `Error: could not reach judging server at http://${JUDGE_URL}:${JUDGE_PORT}. Judging will not be available.`
+      );
+    })
+    .finally(() => {
+      console.log(
+        `Server started on port ${parseInt(BACKEND_PORT)} at ${BACKEND_URL}.`
+      );
+    });
 });
 
 process.on("SIGINT", () => {

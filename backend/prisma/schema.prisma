@@ -24,6 +24,14 @@ model User {
   admin                Boolean       @default(false)
   submissions          Submission[]
   participants         Participant[]
+  tokens               Token[]
+}
+
+model Token {
+  token  String   @id
+  uId    Int
+  owner  User     @relation(fields: [uId], references: [id])
+  expiry DateTime
 }
 
 model Submission {

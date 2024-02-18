@@ -100,11 +100,6 @@ export interface SubmitReturn {
   resultPromise: Promise<boolean>;
 }
 
-export interface Session {
-  uId: number;
-  timeout: number;
-}
-
 export interface ChallengeResult {
   submissions: {
     time: number;

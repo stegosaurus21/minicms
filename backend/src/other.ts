@@ -1,12 +1,10 @@
 import { rm } from "fs/promises";
-import { tokens } from "./auth";
 import { awaitResult, awaitScoring, awaitTest } from "./results";
 import { prisma } from "./server";
 import { HttpError } from "http-errors";
 import { Request, Response } from "express";
 
 export async function clear() {
-  tokens.clear();
   awaitTest.clear();
   awaitScoring.clear();
   awaitResult.clear();
@@ -14,6 +12,7 @@ export async function clear() {
     prisma.participant.deleteMany(),
     prisma.result.deleteMany(),
     prisma.submission.deleteMany(),
+    prisma.token.deleteMany(),
     prisma.user.deleteMany(),
   ]);
   await rm("./upload", { recursive: true, force: true });

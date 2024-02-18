@@ -21,11 +21,13 @@ A simple contest management system powered by Judge0.
 ## TODO
 
 - (In progress) Admin console
+  - Manage users (e.g. grant admin)
+  - View submissions
   - Rejudging
-- (In progress) Migrate problems to DB
-- Better token handling
+- (DONE) Migrate problems to DB
+- (DONE) Better token handling
 - Better logging
-- Make server handle unavailable judge more gracefully
+- (DONE(ish)) Make server handle unavailable judge more gracefully
 - Fix tests D:
 - Bundle with Judge0
 - Frontend and backend really should be separate images
@@ -36,10 +38,12 @@ A simple contest management system powered by Judge0.
 - Refactor other forms with react-hook-form
 - Batch judging requests
 - Challenge difficulty
+- Websockets for live data
 - Contest visibility
 - Enforce ID restrictions
 - Challenge contest weight
-- Prevent division by zero in empty task
+- Prevent division by zero in empty task (handle empty tasks gracefully in general)
+- Refactor task numbering
 - Extra contest configuration options
   - Public leaderboard
   - Submission after close
