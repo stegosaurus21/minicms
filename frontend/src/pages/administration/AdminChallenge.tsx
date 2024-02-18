@@ -360,7 +360,10 @@ export const AdminChallenge = () => {
                         onClick={async () => {
                           const data = await uploadTask();
                           if (data === undefined) return;
-                          const { config, tests } = data;
+                          const {
+                            config: { examples, ...config },
+                            tests,
+                          } = data;
                           setValue(`tasks.${i}`, {
                             task_number: task.task_number,
                             tests: tests,
