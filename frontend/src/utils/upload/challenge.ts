@@ -43,7 +43,7 @@ export async function validateChallenge(parsedZip: UploadChallengeType) {
     ...parsedZip.config,
     tasks: await Promise.all(
       parsedZip.tasks.map(async ({ data }, i) => {
-        const { config, tests } = await validateTask(data);
+        const { config: {examples, ...config}, tests } = await validateTask(data);
         return {
           task_number: i,
           tests: tests,
