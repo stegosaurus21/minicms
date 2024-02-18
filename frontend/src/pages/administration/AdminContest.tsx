@@ -101,8 +101,6 @@ export const AdminContest = () => {
     return handleError(e);
   }
 
-  console.log(newChallengeId);
-
   return (
     <>
       <Container>

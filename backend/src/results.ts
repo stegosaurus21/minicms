@@ -152,6 +152,7 @@ export async function getTest(
     return await getTestInternal(submission, task_number, test_number);
   } catch (e) {
     if (e instanceof PrismaClientKnownRequestError) {
+      console.log(e);
       if (e.code === "P2025") {
         await new Promise((resolve) => {
           awaitTest.set(`${submission}/${task_number}/${test_number}`, resolve);
@@ -245,7 +246,7 @@ export async function judgeCallback(
         Buffer.from("Compilation successful.").toString("base64"),
     },
   });
-
+  console.log("yeahhhhhh got here");
   const waiter: Resolve | undefined = awaitTest.get(
     `${submission}/${task_number}/${test_number}`
   );

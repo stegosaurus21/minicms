@@ -16,10 +16,8 @@ import { JudgeLanguage } from "./interface";
 import env from "dotenv";
 
 env.config();
-export const BACKEND_URL = process.env.BACKEND_URL || "localhost";
-export const BACKEND_PORT_INT = process.env.BACKEND_PORT_INT || "8080";
-export const BACKEND_PORT_EXT =
-  process.env.BACKEND_PORT_EXT || BACKEND_PORT_INT;
+export const CALLBACK_URL = process.env.CALLBACK_URL || "localhost";
+export const BACKEND_PORT = process.env.BACKEND_PORT || "8080";
 export const JUDGE_URL = process.env.JUDGE_URL || "localhost";
 export const JUDGE_PORT = process.env.JUDGE_PORT || "2358";
 
@@ -66,7 +64,6 @@ app.put(
 
 app.use(express.static("public"));
 app.get("*", (req, res) => {
-  console.log(req.body);
   res.sendFile("index.html", { root: "public" }, (err) => {
     res.end();
 
@@ -75,7 +72,7 @@ app.get("*", (req, res) => {
 });
 app.use(errorHandler);
 
-const server = app.listen(parseInt(BACKEND_PORT_INT), "0.0.0.0", async () => {
+const server = app.listen(parseInt(BACKEND_PORT), "0.0.0.0", async () => {
   fetch(`http://${JUDGE_URL}:${JUDGE_PORT}/languages`, {
     method: "GET",
   })
@@ -91,7 +88,7 @@ const server = app.listen(parseInt(BACKEND_PORT_INT), "0.0.0.0", async () => {
     })
     .finally(() => {
       console.log(
-        `Server started on port ${parseInt(BACKEND_PORT_INT)} on 0.0.0.0.`
+        `Server started on port ${parseInt(BACKEND_PORT)} on 0.0.0.0.`
       );
     });
 });

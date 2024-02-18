@@ -99,8 +99,11 @@ export function retryUnlessForbidden(failureCount: number, error: unknown) {
   if (!(error instanceof TRPCClientError)) {
     return failureCount < 3;
   }
-  console.log(error);
+
+  if (!error || !error.data) return failureCount < 3;
+
   if (error.data.code === "FORBIDDEN") {
+    console.log("this actually triggered");
     return false;
   }
 

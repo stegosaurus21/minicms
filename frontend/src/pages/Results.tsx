@@ -79,7 +79,7 @@ const Results = () => {
   const [compileOutput, setCompileOutput] = useState<string>("");
 
   useEffect(() => {
-    if (!queryChallenge.isSuccess) return;
+    if (!queryChallenge.data) return;
 
     const newMap = new Map<number, Map<number, TestResult>>();
     queryChallenge.data.challenge.tasks.forEach((task) => {
@@ -141,7 +141,7 @@ const Results = () => {
       </Container>
     );
   }
-
+  console.log("what the heck");
   try {
     assertQuerySuccess(queryValidation, "ERR_SUBMISSION_404");
     if (!queryValidation.data.isViewable) throw error("ERR_SUBMISSION_404");
@@ -186,7 +186,7 @@ const Results = () => {
         return null;
     }
   }
-
+  console.log("yes");
   return (
     <Container>
       <span className={style.returnLink} onClick={() => navigate("./..")}>
