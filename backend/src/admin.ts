@@ -18,7 +18,7 @@ import { isAdmin, protectedProcedure } from "./auth";
 export const adminProcedure = protectedProcedure.use(async ({ next, ctx }) => {
   const { uId } = ctx;
 
-  if (!isAdmin(uId))
+  if (!(await isAdmin(uId)))
     throw new TRPCError({
       message: "You do not have access to administrator controls.",
       code: "UNAUTHORIZED",
