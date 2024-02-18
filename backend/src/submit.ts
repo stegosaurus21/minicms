@@ -1,7 +1,7 @@
 import createError, { HttpError } from "http-errors";
 import { v4 } from "uuid";
 import {
-  BACKEND_PORT,
+  BACKEND_PORT_EXT,
   BACKEND_URL,
   JUDGE_PORT,
   JUDGE_URL,
@@ -76,7 +76,7 @@ export async function submit(
                 expected_output: test.output,
                 cpu_time_limit: time_limit,
                 memory_limit: memory_limit,
-                callback_url: `http://${BACKEND_URL}:${BACKEND_PORT}/callback/${judgeSecret}/${submission}/${
+                callback_url: `http://${BACKEND_URL}:${BACKEND_PORT_EXT}/callback/${judgeSecret}/${submission}/${
                   task.task_number
                 }/${test.test_number}/${Date.now()}`,
               }),
