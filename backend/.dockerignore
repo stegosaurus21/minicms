@@ -3,4 +3,4 @@ node_modules/**
 tests/**
 upload/**
 prisma/db
-public/**
+public

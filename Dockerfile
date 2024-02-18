@@ -5,8 +5,10 @@ COPY ./config/supervisord.conf /etc/supervisor/supervisord.conf
 
 WORKDIR /minicms
 
-COPY ./backend/package-lock.json ./backend
-COPY ./frontend/package-lock.json ./frontend
+COPY ./backend/package-lock.json ./backend/
+COPY ./backend/package.json ./backend/
+COPY ./frontend/package-lock.json ./frontend/
+COPY ./frontend/package.json ./frontend/
 
 WORKDIR /minicms/backend
 RUN npm ci

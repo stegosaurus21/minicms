@@ -62,7 +62,6 @@ app.put(
   }
 );
 
-app.use(errorHandler);
 app.use(express.static("public"));
 app.get("*", (req, res) => {
   console.log(req.body);
@@ -72,6 +71,7 @@ app.get("*", (req, res) => {
     if (err) throw err;
   });
 });
+app.use(errorHandler);
 
 const server = app.listen(parseInt(BACKEND_PORT), BACKEND_URL, async () => {
   fetch(`http://${JUDGE_URL}:${JUDGE_PORT}/languages`, {
