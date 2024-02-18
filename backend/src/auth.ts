@@ -137,12 +137,14 @@ export const authRouter = router({
     const token = ctx.token;
     if (!token) return { isLoggedIn: false, username: null };
 
-    const session = await prisma.token.findUnique({ where: { token: token } });
-    if (session === null || session.expiry < new Date()) {
+    let uId = -1;
+    try {
+      uId = await getUser(token);
+    } catch (e) {
       return { isLoggedIn: false, username: null };
     }
 
-    return { isLoggedIn: true, username: await getUsername(session.uId) };
+    return { isLoggedIn: true, username: await getUsername(uId) };
   }),
 
   changePassword: protectedProcedure
@@ -176,13 +178,22 @@ export const authRouter = router({
     }),
 });
 
-export async function getUser(req: Request): Promise<number> {
-  const token = req.header("token");
+export async function getUser(token: string | undefined): Promise<number> {
   const session = await prisma.token.findUnique({
     where: { token: token || "" },
   });
   if (token === undefined || session === null || session.expiry < new Date()) {
-    throw createError(403, "Invalid or expired token.");
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Expired or invalid token.",
+    });
+  }
+  // Refresh the token if there is less than 3 hours expiry
+  if (session.expiry < new Date(Date.now() + 1000 * 60 * 60 * 3)) {
+    await prisma.token.update({
+      where: { token: token },
+      data: { expiry: new Date(Date.now() + 1000 * 60 * 60 * 6) },
+    });
   }
 
   return session.uId;

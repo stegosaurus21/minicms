@@ -8,7 +8,7 @@ export async function createContext(opts: CreateNextContextOptions) {
   try {
     if (opts.req.headers?.token) {
       token = opts.req.headers.token;
-      uId = await getUser(opts.req);
+      uId = await getUser(opts.req.header("token"));
     }
   } catch {
     uId = undefined;
