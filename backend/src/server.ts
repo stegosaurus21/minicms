@@ -17,6 +17,7 @@ import env from "dotenv";
 
 env.config();
 export const BACKEND_URL = process.env.BACKEND_URL || "localhost";
+export const CALLBACK_URL = process.env.CALLBACK_URL || BACKEND_URL;
 export const BACKEND_PORT = process.env.BACKEND_PORT || "8080";
 export const JUDGE_URL = process.env.JUDGE_URL || "localhost";
 export const JUDGE_PORT = process.env.JUDGE_PORT || "2358";
@@ -73,7 +74,7 @@ app.get("*", (req, res) => {
 });
 app.use(errorHandler);
 
-const server = app.listen(parseInt(BACKEND_PORT), BACKEND_URL, async () => {
+const server = app.listen(parseInt(BACKEND_PORT), "0.0.0.0", async () => {
   fetch(`http://${JUDGE_URL}:${JUDGE_PORT}/languages`, {
     method: "GET",
   })
@@ -89,7 +90,7 @@ const server = app.listen(parseInt(BACKEND_PORT), BACKEND_URL, async () => {
     })
     .finally(() => {
       console.log(
-        `Server started on port ${parseInt(BACKEND_PORT)} at ${BACKEND_URL}.`
+        `Server started on port ${parseInt(BACKEND_PORT)} on 0.0.0.0.`
       );
     });
 });
