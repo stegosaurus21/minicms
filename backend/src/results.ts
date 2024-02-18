@@ -246,7 +246,7 @@ export async function judgeCallback(
         Buffer.from("Compilation successful.").toString("base64"),
     },
   });
-  console.log("yeahhhhhh got here");
+
   const waiter: Resolve | undefined = awaitTest.get(
     `${submission}/${task_number}/${test_number}`
   );
@@ -408,7 +408,7 @@ export async function getLeaderboard(contest: string) {
       };
     });
   }
-  console.log(all);
+
   return {
     all: all,
     official: contest_end ? official : all,
