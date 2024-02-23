@@ -1,7 +1,6 @@
 FROM node:18
 
 RUN apt update && apt install -y supervisor
-COPY ./config/supervisord.conf /etc/supervisor/supervisord.conf
 
 WORKDIR /minicms
 
@@ -18,6 +17,7 @@ RUN npx prisma db seed
 
 COPY ./backend .
 
+COPY ./config/supervisord.conf /etc/supervisor/supervisord.conf
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
 
 EXPOSE 8080
