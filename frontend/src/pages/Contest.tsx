@@ -60,7 +60,7 @@ const ContestPage = () => {
   }));
 
   sortedLeaderboard.sort((a, b) => a.total - b.total);
-  console.log(sortedLeaderboard);
+
   return (
     <>
       <Container>

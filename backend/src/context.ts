@@ -1,22 +1,11 @@
 import type { CreateNextContextOptions } from "@trpc/server/adapters/next";
-import { getUser } from "./auth";
 import { Request } from "express";
 
 export async function createContext(opts: CreateNextContextOptions) {
-  let uId: number | undefined;
   let token: string | undefined;
-  try {
-    if (opts.req.headers?.token) {
-      token = opts.req.headers.token;
-      uId = await getUser(opts.req.header("token"));
-    }
-  } catch {
-    uId = undefined;
-    token = undefined;
-  }
+  token = opts.req.headers?.token;
   return {
     token: token,
-    uId: uId,
     req: opts.req,
     res: opts.res,
   };

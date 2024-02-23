@@ -77,7 +77,6 @@ export const AdminChallenge = () => {
     });
   // Hacky, but necessary for my sanity right now
   const values = useWatch({ control: control }) as ChallengeData;
-  console.log(values);
 
   const [editingData, setEditingData] = useState<EditData | undefined>();
 
@@ -242,7 +241,7 @@ export const AdminChallenge = () => {
   }
 
   if (values.tasks === undefined) return <></>;
-  console.log(editingData);
+
   return (
     <>
       {editingData && (

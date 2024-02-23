@@ -1,10 +1,10 @@
 import { publicProcedure, router } from "./trpc";
-import { authRouter } from "./auth";
-import { contestRouter } from "./contest";
-import { challengeRouter } from "./challenge";
-import { resultsRouter } from "./results";
+import { authRouter } from "./routers/authRouter";
+import { contestRouter } from "./routers/contestRouter";
+import { challengeRouter } from "./routers/challengeRouter";
+import { resultsRouter } from "./routers/resultsRouter";
 import { judgeLanguages } from "./server";
-import { adminRouter } from "./admin";
+import { adminRouter } from "./routers/adminRouter";
 
 export const appRouter = router({
   auth: authRouter,

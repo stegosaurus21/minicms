@@ -1,6 +1,6 @@
-import { prisma } from "./server";
+import { prisma } from "../server";
 import { TRPCError } from "@trpc/server";
-import { router } from "./trpc";
+import { router } from "../trpc";
 import { z } from "zod";
 import {
   ChallengeSchema,
@@ -12,8 +12,9 @@ import {
   TaskWhereUniqueInputSchema,
   TestSchema,
   TestWhereUniqueInputSchema,
-} from "../prisma/generated/zod";
-import { isAdmin, protectedProcedure } from "./auth";
+} from "../../prisma/generated/zod";
+import { isAdmin } from "../auth";
+import { protectedProcedure } from "./authRouter";
 
 export const adminProcedure = protectedProcedure.use(async ({ next, ctx }) => {
   const { uId } = ctx;

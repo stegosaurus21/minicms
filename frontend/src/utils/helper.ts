@@ -103,7 +103,6 @@ export function retryUnlessForbidden(failureCount: number, error: unknown) {
   if (!error || !error.data) return failureCount < 3;
 
   if (error.data.code === "FORBIDDEN") {
-    console.log("this actually triggered");
     return false;
   }
 
@@ -138,14 +137,3 @@ export function refreshToast(
 
 export type ArrayElement<A> = A extends readonly (infer T)[] ? T : never;
 // https://stackoverflow.com/questions/41253310/typescript-retrieve-element-type-information-from-array-type#
-
-export function deepFreeze<T>(obj: T) {
-  var propNames = Object.getOwnPropertyNames(obj);
-  for (let name of propNames) {
-    let value = (obj as any)[name];
-    if (value && typeof value === "object") {
-      deepFreeze(value);
-    }
-  }
-  return Object.freeze(obj);
-}

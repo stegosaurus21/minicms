@@ -21,13 +21,17 @@ import {
 } from "utils/helper";
 import style from "../styles.module.css";
 import { Buffer } from "buffer";
-import { trpc, trpcVanilla } from "utils/trpc";
+import { authedWS, trpc, trpcVanilla } from "utils/trpc";
 import { error, handleError } from "components/Error";
 import { useEffect, useState } from "react";
 import { inferRouterOutputs } from "@trpc/server";
 import { AppRouter } from "../../../backend/src/app";
+import { Observable } from "@trpc/server/observable";
 
-type TestResult = inferRouterOutputs<AppRouter>["results"]["getTest"];
+type UnwrapObservable<A> = A extends Observable<infer T, unknown> ? T : never;
+type TestResult = UnwrapObservable<
+  inferRouterOutputs<AppRouter>["results"]["getTests"]
+>;
 
 const Results = () => {
   const navigate = useNavigateShim();
@@ -73,14 +77,25 @@ const Results = () => {
   const [results, setResults] = useState<Map<number, Map<number, TestResult>>>(
     new Map()
   );
-  // This is terrible but I genuinely think it's the best way of going about this?
-  const [resultsDirty, setResultsDirty] = useState<number>(0);
-
   const [compileOutput, setCompileOutput] = useState<string>("");
+  const subscribeTests = trpc.results.getTests.useSubscription(
+    authedWS({
+      submission: paramSubmissionName,
+    }),
+    {
+      enabled: queryChallenge.isSuccess && querySubmission.isSuccess,
+      onData(data) {
+        if (!compileOutput) setCompileOutput(data.compile_output);
+        setResults((prev) => {
+          prev.get(data.task_number)?.set(data.test_number, data);
+          return new Map(prev);
+        });
+      },
+    }
+  );
 
   useEffect(() => {
     if (!queryChallenge.data) return;
-
     const newMap = new Map<number, Map<number, TestResult>>();
     queryChallenge.data.challenge.tasks.forEach((task) => {
       newMap.set(task.task_number, new Map<number, TestResult>());
@@ -96,28 +111,9 @@ const Results = () => {
         })
       );
     });
-
     setResults(newMap);
-    setResultsDirty((x) => x + 1);
-
-    queryChallenge.data.challenge.tasks.forEach((task) =>
-      task.tests.forEach(async (test) => {
-        const result = await trpcVanilla.results.getTest.query({
-          submission: paramSubmissionName,
-          task: task.task_number,
-          test: test.test_number,
-        });
-        if (compileOutput === "") setCompileOutput(result.compile_output);
-        setResults((old) => {
-          old.get(task.task_number)?.set(test.test_number, result);
-          return old;
-        });
-        setResultsDirty((x) => x + 1);
-      })
-    );
   }, [queryChallenge.isSuccess]);
-  console.log(queryChallenge.data);
-  console.log(results);
+
   try {
     assertQuerySuccess(queryUser, "ERR_AUTH");
   } catch (e) {
@@ -141,7 +137,7 @@ const Results = () => {
       </Container>
     );
   }
-  console.log("what the heck");
+
   try {
     assertQuerySuccess(queryValidation, "ERR_SUBMISSION_404");
     if (!queryValidation.data.isViewable) throw error("ERR_SUBMISSION_404");
@@ -165,9 +161,6 @@ const Results = () => {
       results.get(task.task_number)?.values() || []
     );
 
-    console.log(task.task_number);
-    console.log(taskResults);
-
     if (taskResults.find((x) => x.status === "") || taskResults.length === 0)
       return null;
 
@@ -186,7 +179,7 @@ const Results = () => {
         return null;
     }
   }
-  console.log("yes");
+
   return (
     <Container>
       <span className={style.returnLink} onClick={() => navigate("./..")}>
@@ -267,7 +260,6 @@ const Results = () => {
                     {Array.from(results.get(task.task_number)?.values() || [])
                       .toSorted((a, b) => a.test_number - b.test_number)
                       .map((result) => {
-                        console.log(result);
                         return (
                           <tr>
                             <td>{`${result.test_number + 1}`}</td>

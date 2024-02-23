@@ -38,12 +38,14 @@ const shape = toShape(challengeDefinition);
 export type UploadChallengeType = z.infer<typeof shape>;
 
 export async function validateChallenge(parsedZip: UploadChallengeType) {
-  console.log(parsedZip);
   return {
     ...parsedZip.config,
     tasks: await Promise.all(
       parsedZip.tasks.map(async ({ data }, i) => {
-        const { config: {examples, ...config}, tests } = await validateTask(data);
+        const {
+          config: { examples, ...config },
+          tests,
+        } = await validateTask(data);
         return {
           task_number: i,
           tests: tests,

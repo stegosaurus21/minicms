@@ -14,6 +14,9 @@ import { PrismaClient } from "@prisma/client";
 import { appRouter } from "./app";
 import { JudgeLanguage } from "./interface";
 import env from "dotenv";
+import { WebSocketServer } from "ws";
+import { applyWSSHandler } from "@trpc/server/adapters/ws";
+import { parse } from "url";
 
 env.config();
 export const CALLBACK_URL = process.env.CALLBACK_URL || "localhost";
@@ -24,6 +27,7 @@ export const JUDGE_PORT = process.env.JUDGE_PORT || "2358";
 export const prisma = new PrismaClient();
 
 const app = express();
+
 export let judgeLanguages: JudgeLanguage[];
 let lastClear = Date.now();
 
@@ -99,3 +103,17 @@ process.on("SIGINT", () => {
     console.log("server stopped");
   });
 });
+
+const wss = new WebSocketServer({ noServer: true });
+server.on("upgrade", function upgrade(request, socket, head) {
+  const { pathname } = parse(request.url || "");
+
+  if (pathname === "/ws") {
+    wss.handleUpgrade(request, socket, head, function done(ws) {
+      wss.emit("connection", ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
+});
+const handler = applyWSSHandler({ wss, router: appRouter, createContext });

@@ -16,7 +16,6 @@ import "katex/dist/katex.min.css";
 import style from "./styles.module.css";
 import { httpBatchLink, httpLink, splitLink } from "@trpc/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { config } from "./config";
 import { trpc, trpcClientOptions } from "./utils/trpc";
 import ErrorPage from "~components/Error";
 import { AdminHome } from "~pages/administration/AdminHome";

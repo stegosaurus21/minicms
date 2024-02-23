@@ -41,7 +41,7 @@ if [ "$2" == "--publish" ]; then
     git tag "$1"
 
     echo "Publishing to GitHub..."
-    git push --tags
+    git push --tags --force-with-lease
     
     echo "Publishing to Docker Hub..."
     docker push "jl58261/minicms:$1"

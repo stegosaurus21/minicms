@@ -2,88 +2,25 @@ import createError, { HttpError } from "http-errors";
 import { prisma } from "./server";
 import { LeaderboardEntry, Resolve, ResolveCounter } from "./interface";
 import { getContestInternal } from "./contest";
-import { getChallengeResults } from "./challenge";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
-import { publicProcedure, router } from "./trpc";
-import { protectedProcedure } from "./auth";
-import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import { Observer } from "@trpc/server/observable";
 
-export const awaitTest: Map<string, Resolve> = new Map<string, Resolve>();
+type UnwrapPromise<A> = A extends Promise<infer T> ? T : never;
+export type TestResultType = UnwrapPromise<ReturnType<typeof getTest>>;
+
+export const awaitTest: Map<
+  string,
+  { emit: Observer<TestResultType, unknown>; resolve: Resolve }
+> = new Map<
+  string,
+  { emit: Observer<TestResultType, unknown>; resolve: Resolve }
+>();
 export const awaitResult: Map<string, Resolve> = new Map<string, Resolve>();
 export const awaitScoring: Map<string, ResolveCounter> = new Map<
   string,
   ResolveCounter
 >();
-
-const publicResultsProcedure = protectedProcedure
-  .input(z.object({ submission: z.string() }))
-  .use(async ({ input, next }) => {
-    const { submission } = input;
-    await checkSubmissionExists(submission);
-    return next();
-  });
-const protectedResultsProcedure = publicResultsProcedure.use(
-  async ({ input, ctx, next }) => {
-    const { submission } = input;
-    const { uId } = ctx;
-    await checkSubmissionAuth(uId, submission);
-    return next();
-  }
-);
-
-export const resultsRouter = router({
-  getScore: protectedResultsProcedure.query(async ({ input }) => {
-    const { submission } = input;
-    return (await getResult(submission)).score;
-  }),
-
-  getTest: protectedResultsProcedure
-    .input(z.object({ task: z.number(), test: z.number() }))
-    .query(async ({ input }) => {
-      const { submission, task, test } = input;
-      return await getTest(submission, task, test);
-    }),
-
-  getSubmission: protectedResultsProcedure
-    .input(z.object({ challenge: z.string(), contest: z.string() }))
-    .query(async ({ input, ctx }) => {
-      const { contest, challenge, submission } = input;
-      const { uId } = ctx;
-      const thisSubmission = (
-        await getChallengeResults(contest, challenge, uId)
-      ).submissions.find((x) => x.token === submission);
-      if (thisSubmission === undefined) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Submission not found in challenge.",
-        });
-      }
-      return {
-        source: (await getSource(submission)).src,
-        index: thisSubmission.index,
-        time: thisSubmission.time,
-      };
-    }),
-
-  getLeaderboard: publicProcedure
-    .input(z.object({ contest: z.string() }))
-    .query(async ({ input }) => {
-      const { contest } = input;
-      return await getLeaderboard(contest);
-    }),
-
-  validate: publicResultsProcedure.query(async ({ input, ctx }) => {
-    const { submission } = input;
-    const { uId } = ctx;
-    try {
-      await checkSubmissionAuth(uId, submission);
-      return { isViewable: true };
-    } catch {
-      return { isViewable: false };
-    }
-  }),
-});
 
 /**
  * Gets the challenge associated with a given submission
@@ -91,7 +28,9 @@ export const resultsRouter = router({
  * @param {string} submission - the submission ID to get the challenge for
  * @returns {Promise<string>} - the challenge ID the submission is for
  */
-async function getSubmissionChallenge(submission: string): Promise<string> {
+export async function getSubmissionChallenge(
+  submission: string
+): Promise<string> {
   try {
     await checkSubmissionExists(submission);
 
@@ -111,7 +50,7 @@ async function getSubmissionChallenge(submission: string): Promise<string> {
   }
 }
 
-async function getTestInternal(
+export async function getTest(
   submission: string,
   task_number: number,
   test_number: number
@@ -143,6 +82,7 @@ async function getTestInternal(
  * @param {number} test_num - the index of the test to get
  * @returns
  */
+/*
 export async function getTest(
   submission: string,
   task_number: number,
@@ -162,7 +102,7 @@ export async function getTest(
     } else throw e;
   }
 }
-
+*/
 export async function checkSubmissionExists(submission: string) {
   try {
     await prisma.submission.findUniqueOrThrow({ where: { token: submission } });
@@ -180,7 +120,7 @@ export async function checkSubmissionExists(submission: string) {
   }
 }
 
-async function getResultInternal(submission: string) {
+export async function getResultInternal(submission: string) {
   try {
     const submissionObj = await prisma.submission.findUniqueOrThrow({
       select: { score: true, challenge_id: true, contest_id: true },
@@ -247,11 +187,13 @@ export async function judgeCallback(
     },
   });
 
-  const waiter: Resolve | undefined = awaitTest.get(
-    `${submission}/${task_number}/${test_number}`
-  );
+  const waiter:
+    | { emit: Observer<TestResultType, unknown>; resolve: Resolve }
+    | undefined = awaitTest.get(`${submission}/${task_number}/${test_number}`);
   if (waiter) {
-    (waiter as Resolve)(true);
+    waiter.emit.next(await getTest(submission, task_number, test_number));
+    awaitTest.delete(`${submission}/${task_number}/${test_number}`);
+    waiter.resolve(true);
   }
 
   const scoreWaiter = awaitScoring.get(submission);

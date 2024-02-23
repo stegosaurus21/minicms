@@ -19,7 +19,6 @@ export async function clear() {
 }
 
 export const errorHandler = (err: HttpError, req: Request, res: Response) => {
-  console.log(err);
   const statusCode = err.status || err.statusCode || 500;
   console.log(`${statusCode}: ${statusCode === 500 ? err : err.message}`);
   return res.status(statusCode).json({
