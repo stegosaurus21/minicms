@@ -1,6 +1,12 @@
 if [ $# -lt 1 ] || [ $# -gt 2 ] || ([ $# -eq 2 ] && [ "$2" != "--publish" ]); then
-    echo "Usage: ./build.sh <version> [--publish]"
+    echo "Usage: ./build.sh --list"
+    echo "       ./build.sh <version> [--publish]"
     exit 1
+fi
+
+if [ "$1" == "--list" ]; then
+    git tag | tac
+    exit 0
 fi
 
 if [ -n "$(git tag | grep "$1")" ]; then
