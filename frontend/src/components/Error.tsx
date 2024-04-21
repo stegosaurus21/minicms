@@ -26,6 +26,8 @@ export const errorMessages = {
   "ERR_NOT_ADMIN": "You do not have access to administrator controls",
   "ERR_CHAL_LIST_FETCH":
     "A server error occurred when fetching the challenge list.",
+  "ERR_USER_LIST_FETCH":
+    "A server error occurred when fetching the list of users.",
 };
 
 export type ErrorCode = keyof typeof errorMessages;

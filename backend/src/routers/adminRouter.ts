@@ -194,4 +194,8 @@ export const adminRouter = router({
         data: data,
       });
     }),
+
+  getUsers: adminProcedure.query(async () => {
+    return await prisma.user.findMany();
+  }),
 });
